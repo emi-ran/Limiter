@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -17,12 +17,15 @@ public partial class MainWindow : Window
     private string _sortProperty = nameof(AppRow.DownloadRate);
     private ListSortDirection _sortDirection = ListSortDirection.Descending;
     private string _search = "";
+    private bool _rulesOnly;
 
     public MainWindow()
     {
         InitializeComponent();
+        MachineName.Text = Environment.MachineName.ToUpperInvariant();
         AppsGrid.ItemsSource = _rows;
         CollectionViewSource.GetDefaultView(_rows).Filter = item => item is AppRow row &&
+            (!_rulesOnly || row.DownloadLimit > 0 || row.UploadLimit > 0) &&
             (row.AppName.Contains(_search, StringComparison.CurrentCultureIgnoreCase) ||
              row.Path.Contains(_search, StringComparison.CurrentCultureIgnoreCase));
         AppsGrid.Columns[1].SortDirection = ListSortDirection.Descending;
@@ -59,8 +62,23 @@ public partial class MainWindow : Window
             row.UpdateProcesses(item.Processes);
         }
         ReorderRows();
+        if (_rulesOnly) CollectionViewSource.GetDefaultView(_rows).Refresh();
         AppCount.Text = $"{_rowByPath.Count} uygulama · {_rowByPath.Values.Sum(row => row.Children.Count)} process";
         UpdateSelectedTraffic();
+    }
+
+    private void LimiterToggle_Click(object sender, RoutedEventArgs e)
+    {
+        _engine.SetLimiterEnabled(LimiterToggle.IsChecked == true);
+        LimiterState.Text = _engine.LimiterEnabled ? "Sınırlar etkin" : "Sınırlar duraklatıldı · İzleme devam ediyor";
+        UpdateSelectedTraffic();
+    }
+
+    private void View_Click(object sender, RoutedEventArgs e)
+    {
+        _rulesOnly = ReferenceEquals(sender, RulesView);
+        if (AppsGrid?.ItemsSource is null) return;
+        CollectionViewSource.GetDefaultView(_rows).Refresh();
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -77,12 +95,12 @@ public partial class MainWindow : Window
             SelectedDownload.Text = row.DownloadText;
             SelectedUpload.Text = row.UploadText;
             SelectedTotal.Text = row.TotalText;
-            SelectedRule.Text = row.LimitText == "—" ? "Sınır yok" : row.LimitText + " KB/sn";
+            SelectedRule.Text = row.LimitText == "—" ? "Sınır yok" : row.LimitText + " KB/sn" + (_engine.LimiterEnabled ? "" : " · Duraklatıldı");
             RuleScope.Text = row.IsProcess
                 ? $"Yalnızca PID {row.ProcessId} · Process kapanınca sona erer."
                 : "Bu uygulamanın tüm process'lerinin toplamı.";
             ParentRule.Text = row.IsProcess && (row.AppDownloadLimit > 0 || row.AppUploadLimit > 0)
-                ? $"Uygulama toplam sınırı da geçerli: ↓ {row.AppDownloadLimit} / ↑ {row.AppUploadLimit} KB/sn"
+                ? $"Uygulama toplam sınırı: ↓ {row.AppDownloadLimit} / ↑ {row.AppUploadLimit} KB/sn"
                 : "";
         }
     }
@@ -98,7 +116,25 @@ public partial class MainWindow : Window
         e.Column.SortDirection = direction;
         _sortProperty = e.Column.SortMemberPath;
         _sortDirection = direction;
+        UpdateSortDescription();
         ReorderRows();
+    }
+
+    private void UpdateSortDescription()
+    {
+        string label = _sortProperty switch
+        {
+            nameof(AppRow.DownloadRate) => "İndirme",
+            nameof(AppRow.UploadRate) => "Yükleme",
+            nameof(AppRow.TotalBytes) => "Toplam trafik",
+            nameof(AppRow.DownloadLimit) => "İndirme sınırı",
+            _ => "Uygulama adı"
+        };
+        bool ascending = _sortDirection == ListSortDirection.Ascending;
+        string direction = _sortProperty == nameof(AppRow.Name)
+            ? (ascending ? "A → Z" : "Z → A")
+            : (ascending ? "Düşükten yükseğe" : "Yüksekten düşüğe");
+        SortDescription.Text = $"{(ascending ? "↑" : "↓")}  {label} · {direction}";
     }
 
     private void ReorderRows()

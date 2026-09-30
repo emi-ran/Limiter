@@ -20,6 +20,8 @@ Hazır Windows x64 paketi özel deponun **Releases** bölümünde bulunur.
 
 ## Şu anki kapsam
 
+- NetLimiter benzeri üst araç çubuğu, Activity / Rule List görünümü ve yeniden boyutlandırılabilir Info View paneli
+- **Limiter On** ile uygulama ve PID sınırlarını birlikte duraklatma; trafik izleme devam eder, kayıtlı kurallar korunur. Yeniden açıldığında kurallar uygulanır. Bu anahtar oturumluk olup uygulama her açılışta etkin başlar. Blocker ve Priorities kontrolleri henüz kullanıma açık değildir.
 - Canlı uygulama trafiği ve toplam bayt sayısı
 - Kompakt koyu arayüz, uygulama araması, toplam hızlar ve seçili uygulama ayrıntıları
 - Dosyadan arka planda okunup önbelleğe alınan uygulama simgeleri
@@ -30,7 +32,7 @@ Hazır Windows x64 paketi özel deponun **Releases** bölümünde bulunur.
 - Tekrar gelen ve hâlâ kuyrukta bekleyen TCP veri paketlerini ayıklama
 - Sınırsız trafikte paket kopyalamadan geçiş
 - Sınır değiştirildiğinde bekleyen paketleri yeni hıza göre yeniden zamanlama
-- Tablo başlıklarıyla sayısal sıralama; hızlar her yenilemede bir kez sıralanır ve başlangıçta indirme hızı en yüksek uygulama üstte gösterilir
+- Tablo başlıklarına tıklayarak artan/azalan sıralama; aktif sütun mavi vurgu ve yön okuyla, seçilen kriter tablonun üstünde açık metinle gösterilir. Hız sınırı sütunu indirme sınırına göre sıralar; hızlar her yenilemede bir kez sıralanır ve başlangıçta indirme hızı en yüksek uygulama üstte gösterilir
 
 Bu ilk sürüm yalnızca açıkken çalışır. Mevcut TCP bağlantıları Windows bağlantı tablosundan alınır; önce kurulmuş UDP bağlantıları süreçle eşleşmeyebilir. IPv6 uzantı başlıkları ve parçalanmış paketler limit hesabına girmez. Sınırlı bir bağlantının kuyruğu dolduğunda paketler serbest bırakılmaz: TCP bu paketleri yeniden ister, UDP paketleri kaybolabilir. Bu nedenle özellikle çok düşük sınırlar ve çoklu bağlantılarda aktarım dalgalanabilir. Ayrı Windows servisi ve daha sıkı paket işleme sonraki aşamadır.
 

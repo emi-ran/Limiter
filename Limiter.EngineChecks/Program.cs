@@ -1,4 +1,4 @@
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
@@ -86,6 +86,39 @@ foreach (var pair in new[] { (Pid: 101, Limit: 16), (Pid: 202, Limit: 64) })
     Require(rate <= pair.Limit * 1.02, "PID pacing exceeded its individual rate.");
 }
 Console.WriteLine("PID isolation, upload separation and combined application limits: OK");
+// Exercise a queued packet without opening capture handles or changing saved rules.
+using (var toggleEngine = new TrafficEngine())
+{
+    const System.Reflection.BindingFlags hidden = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+    var engineType = typeof(TrafficEngine);
+    var store = (RuleStore)engineType.GetField("_rules", hidden)!.GetValue(toggleEngine)!;
+    var rules = (Dictionary<string, AppRule>)typeof(RuleStore).GetField("_rules", hidden)!.GetValue(store)!;
+    const string testPath = "limiter-toggle-check.exe";
+    rules[testPath] = new AppRule { Path = testPath, DownloadKBps = 16, UploadKBps = 32 };
+    var getLimit = engineType.GetMethod("GetAppLimit", hidden)!;
+    int Effective(bool outbound) => (int)getLimit.Invoke(toggleEngine, [testPath, outbound])!;
+    Require(Effective(false) == 16 && Effective(true) == 32, "Initial limits missing.");
+    var packetType = engineType.GetNestedType("Packet", System.Reflection.BindingFlags.NonPublic)!;
+    long future = Stopwatch.GetTimestamp() + 5 * Stopwatch.Frequency;
+    var packet = Activator.CreateInstance(packetType, [new byte[1024], new byte[80], future, testPath, 101, false, null])!;
+    var pending = engineType.GetField("_pending", hidden)!;
+    var queueObject = pending.GetValue(toggleEngine)!;
+    queueObject.GetType().GetMethod("Enqueue")!.Invoke(queueObject, [packet, future]);
+    engineType.GetField("_pendingBytes", hidden)!.SetValue(toggleEngine, 1024L);
+    toggleEngine.SetLimiterEnabled(false);
+    Require(!toggleEngine.LimiterEnabled && Effective(false) == 0 && Effective(true) == 0, "Disabled limiter still applies caps.");
+    var releasedQueue = pending.GetValue(toggleEngine)!;
+    var releasedPacket = releasedQueue.GetType().GetMethod("Peek")!.Invoke(releasedQueue, null)!;
+    long releasedDue = (long)packetType.GetProperty("Due")!.GetValue(releasedPacket)!;
+    Require(releasedDue <= Stopwatch.GetTimestamp(), "Disabling did not release the delayed packet.");
+    Require(store.Get(testPath).DownloadKBps == 16 && store.Get(testPath).UploadKBps == 32, "Toggle changed saved rules.");
+    toggleEngine.SetLimiterEnabled(true);
+    Require(toggleEngine.LimiterEnabled && Effective(false) == 16 && Effective(true) == 32, "Re-enabling did not restore caps.");
+    var resumedQueue = pending.GetValue(toggleEngine)!;
+    var resumedPacket = resumedQueue.GetType().GetMethod("Peek")!.Invoke(resumedQueue, null)!;
+    Require((long)packetType.GetProperty("Due")!.GetValue(resumedPacket)! > releasedDue, "Re-enabling did not pace the queued packet.");
+}
+Console.WriteLine("Global limiter toggle, queued packet release and rule preservation: OK");
 foreach (int limit in new[] { 16, 500, 1024 })
 {
     long due = 0;

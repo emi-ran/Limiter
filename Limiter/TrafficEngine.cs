@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Limiter;
@@ -23,6 +23,24 @@ public sealed class TrafficEngine : IDisposable
     private nint _flowHandle;
     private nint _networkHandle;
     private volatile bool _running;
+    private bool _limiterEnabled = true;
+
+    internal bool LimiterEnabled { get { lock (_sync) return _limiterEnabled; } }
+
+    internal void SetLimiterEnabled(bool enabled)
+    {
+        lock (_sync)
+        {
+            if (_limiterEnabled == enabled) return;
+            _limiterEnabled = enabled;
+            _pacer.Reset();
+            foreach (var path in _pending.UnorderedItems.Select(item => item.Element.Path).Distinct(StringComparer.OrdinalIgnoreCase).ToArray())
+                RetimePath(path);
+            _wake.Set();
+        }
+    }
+
+    private int GetAppLimit(string path, bool outbound) => _limiterEnabled ? _rules.GetLimit(path, outbound) : 0;
     private Task? _flowTask;
     private Task? _networkTask;
     private Task? _sendTask;
@@ -189,6 +207,7 @@ public sealed class TrafficEngine : IDisposable
 
     private int GetProcessLimit(string path, int pid, bool outbound)
     {
+        if (!_limiterEnabled) return 0;
         var rule = GetProcessRule(path, pid);
         return rule is null ? 0 : outbound ? rule.UploadKBps : rule.DownloadKBps;
     }
@@ -206,7 +225,7 @@ public sealed class TrafficEngine : IDisposable
                 retained.Enqueue(packet, priority);
                 continue;
             }
-            int appLimit = _rules.GetLimit(path, packet.Outbound);
+            int appLimit = GetAppLimit(path, packet.Outbound);
             int processLimit = GetProcessLimit(path, packet.ProcessId, packet.Outbound);
             long due = appLimit == 0 && processLimit == 0 ? ++immediate :
                 _pacer.Reserve(new FlowOwner(path, packet.ProcessId), packet.Outbound, packet.Data.Length,
@@ -287,7 +306,7 @@ public sealed class TrafficEngine : IDisposable
                     matchedPath = path;
                     matchedPid = owner.ProcessId;
                     Interlocked.Increment(ref _matchedPackets);
-                    int limit = _rules.GetLimit(path, outbound);
+                    int limit = GetAppLimit(path, outbound);
                     int processLimit = GetProcessLimit(path, owner.ProcessId, outbound);
                     if ((limit > 0 || processLimit > 0) && !info.IsTcpControl)
                     {
@@ -419,7 +438,7 @@ public sealed class TrafficEngine : IDisposable
                     {
                         packet = _pending.Dequeue();
                         var owner = new FlowOwner(packet.Path, packet.ProcessId);
-                        int appLimit = _rules.GetLimit(packet.Path, packet.Outbound);
+                        int appLimit = GetAppLimit(packet.Path, packet.Outbound);
                         int processLimit = GetProcessLimit(packet.Path, packet.ProcessId, packet.Outbound);
                         long now = Stopwatch.GetTimestamp();
                         long ready = _running ? _pacer.ReadyAt(owner, packet.Outbound, packet.Data.Length,

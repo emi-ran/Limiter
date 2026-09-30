@@ -1,4 +1,4 @@
-namespace Limiter;
+﻿namespace Limiter;
 
 internal readonly record struct PacingScope(string Path, int ProcessId, bool Outbound);
 
@@ -44,6 +44,12 @@ internal sealed class TrafficPacer
         var process = new PacingScope(owner.Path, owner.ProcessId, outbound);
         if (appLimit > 0) _sent[app] = RateMath.Due(now, _sent.GetValueOrDefault(app), bytes, appLimit, frequency);
         if (processLimit > 0) _sent[process] = RateMath.Due(now, _sent.GetValueOrDefault(process), bytes, processLimit, frequency);
+    }
+
+    internal void Reset()
+    {
+        _reserved.Clear();
+        _sent.Clear();
     }
 
     internal void ResetReservations(string path)
