@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -25,7 +25,7 @@ public partial class MainWindow : Window
         MachineName.Text = Environment.MachineName.ToUpperInvariant();
         AppsGrid.ItemsSource = _rows;
         CollectionViewSource.GetDefaultView(_rows).Filter = item => item is AppRow row &&
-            (!_rulesOnly || row.DownloadLimit > 0 || row.UploadLimit > 0) &&
+            (!_rulesOnly || row.HasRules || row.Children.Values.Any(child => child.HasRules)) &&
             (row.AppName.Contains(_search, StringComparison.CurrentCultureIgnoreCase) ||
              row.Path.Contains(_search, StringComparison.CurrentCultureIgnoreCase));
         AppsGrid.Columns[1].SortDirection = ListSortDirection.Descending;
@@ -70,8 +70,20 @@ public partial class MainWindow : Window
     private void LimiterToggle_Click(object sender, RoutedEventArgs e)
     {
         _engine.SetLimiterEnabled(LimiterToggle.IsChecked == true);
-        LimiterState.Text = _engine.LimiterEnabled ? "Sınırlar etkin" : "Sınırlar duraklatıldı · İzleme devam ediyor";
+        UpdateGlobalState();
         UpdateSelectedTraffic();
+    }
+
+    private void BlockerToggle_Click(object sender, RoutedEventArgs e)
+    {
+        _engine.SetBlockerEnabled(BlockerToggle.IsChecked == true);
+        UpdateGlobalState();
+        UpdateSelectedTraffic();
+    }
+
+    private void UpdateGlobalState()
+    {
+        LimiterState.Text = $"Limiter {(_engine.LimiterEnabled ? "On" : "Off")} · Blocker {(_engine.BlockerEnabled ? "On" : "Off")}";
     }
 
     private void View_Click(object sender, RoutedEventArgs e)
@@ -95,13 +107,17 @@ public partial class MainWindow : Window
             SelectedDownload.Text = row.DownloadText;
             SelectedUpload.Text = row.UploadText;
             SelectedTotal.Text = row.TotalText;
-            SelectedRule.Text = row.LimitText == "—" ? "Sınır yok" : row.LimitText + " KB/sn" + (_engine.LimiterEnabled ? "" : " · Duraklatıldı");
+            SelectedRule.Text = row.HasRules ? row.LimitText : "Kural yok";
+            RuleRuntime.Text = string.Join(Environment.NewLine, new[]
+            {
+                !_engine.LimiterEnabled ? "Limiter Off · Hız sınırları duraklatıldı." : "",
+                !_engine.BlockerEnabled ? "Blocker Off · Engelleme duraklatıldı." : ""
+            }.Where(message => message.Length > 0));
             RuleScope.Text = row.IsProcess
                 ? $"Yalnızca PID {row.ProcessId} · Process kapanınca sona erer."
                 : "Bu uygulamanın tüm process'lerinin toplamı.";
-            ParentRule.Text = row.IsProcess && (row.AppDownloadLimit > 0 || row.AppUploadLimit > 0)
-                ? $"Uygulama toplam sınırı: ↓ {row.AppDownloadLimit} / ↑ {row.AppUploadLimit} KB/sn"
-                : "";
+            ParentRule.Text = row.ParentRuleText;
+
         }
     }
 
@@ -207,6 +223,7 @@ public partial class MainWindow : Window
             SelectedRule.Text = "—";
             RuleScope.Text = "Kural kapsamı seçilen satıra göre belirlenir.";
             ParentRule.Text = "";
+            RuleRuntime.Text = "";
             RuleControls.IsEnabled = false;
             return;
         }
@@ -215,6 +232,7 @@ public partial class MainWindow : Window
         SelectedPath.Text = row.Path;
         DownloadBox.Text = row.DownloadLimit.ToString();
         UploadBox.Text = row.UploadLimit.ToString();
+        LoadRuleChecks(row);
         RuleMessage.Text = "";
         UpdateSelectedTraffic();
     }
@@ -227,12 +245,42 @@ public partial class MainWindow : Window
         { RuleMessage.Text = "0 veya en az 16 KB/sn yazın."; return; }
         try
         {
-            if (row.IsProcess) _engine.SetProcessLimits(row.Path, row.ProcessId, down, up);
-            else _engine.SetLimits(row.Path, down, up);
+            _engine.SetRule(ReadRule(row, down, up), row.IsProcess ? row.ProcessId : 0);
             RuleMessage.Text = row.IsProcess ? $"Yalnızca PID {row.ProcessId} için kaydedildi." : "Uygulamanın toplam sınırı kaydedildi.";
             RefreshRows();
         }
         catch (Exception ex) { RuleMessage.Text = "Kaydedilemedi: " + ex.Message; }
+    }
+
+    private void LoadRuleChecks(AppRow row)
+    {
+        DownloadEnabled.IsChecked = row.DownloadLimitEnabled;
+        UploadEnabled.IsChecked = row.UploadLimitEnabled;
+        BlockDownload.IsChecked = row.BlockDownload;
+        BlockUpload.IsChecked = row.BlockUpload;
+    }
+
+    private AppRule ReadRule(AppRow row, int down, int up) => new()
+    {
+        Path = row.Path, DownloadKBps = down, UploadKBps = up,
+        DownloadLimitEnabled = DownloadEnabled.IsChecked == true, UploadLimitEnabled = UploadEnabled.IsChecked == true,
+        BlockDownload = BlockDownload.IsChecked == true, BlockUpload = BlockUpload.IsChecked == true
+    };
+
+    private void RuleToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (AppsGrid.SelectedItem is not AppRow row) return;
+        try
+        {
+            _engine.SetRule(ReadRule(row, row.DownloadLimit, row.UploadLimit), row.IsProcess ? row.ProcessId : 0);
+            RuleMessage.Text = "Kural güncellendi.";
+            RefreshRows();
+        }
+        catch (Exception ex)
+        {
+            LoadRuleChecks(row);
+            RuleMessage.Text = "Kaydedilemedi: " + ex.Message;
+        }
     }
 
     private void ClearLimits_Click(object sender, RoutedEventArgs e)
@@ -240,8 +288,9 @@ public partial class MainWindow : Window
         if (AppsGrid.SelectedItem is not AppRow row) return;
         try
         {
-            if (row.IsProcess) _engine.SetProcessLimits(row.Path, row.ProcessId, 0, 0);
-            else _engine.SetLimits(row.Path, 0, 0);
+            _engine.SetRule(new AppRule { Path = row.Path, BlockDownload = row.BlockDownload, BlockUpload = row.BlockUpload },
+                row.IsProcess ? row.ProcessId : 0);
+            DownloadEnabled.IsChecked = UploadEnabled.IsChecked = true;
             DownloadBox.Text = UploadBox.Text = "0";
             RuleMessage.Text = row.IsProcess ? "PID sınırı kaldırıldı." : "Uygulamanın toplam sınırı kaldırıldı.";
             RefreshRows();
@@ -305,10 +354,21 @@ public sealed class AppRow(AppUsage initialUsage, AppRow? parent = null) : INoti
     public int UploadLimit => usage.UploadLimit;
     public int AppDownloadLimit => usage.AppDownloadLimit;
     public int AppUploadLimit => usage.AppUploadLimit;
+    public bool DownloadLimitEnabled => usage.DownloadLimitEnabled;
+    public bool UploadLimitEnabled => usage.UploadLimitEnabled;
+    public bool BlockDownload => usage.BlockDownload;
+    public bool BlockUpload => usage.BlockUpload;
+    public bool HasRules => DownloadLimit > 0 || UploadLimit > 0 || BlockDownload || BlockUpload;
+    public string ParentRuleText => usage.ParentRule is { } rule && (rule.DownloadKBps > 0 || rule.UploadKBps > 0 || rule.BlockDownload || rule.BlockUpload)
+        ? "Uygulamadan devralınan: " + DescribeRule(rule.DownloadKBps, rule.UploadKBps, rule.DownloadLimitEnabled, rule.UploadLimitEnabled, rule.BlockDownload, rule.BlockUpload) : "";
     public string DownloadText => FormatRate(usage.DownloadRate);
     public string UploadText => FormatRate(usage.UploadRate);
     public string TotalText => FormatBytes(usage.DownloadBytes + usage.UploadBytes);
-    public string LimitText => usage.DownloadLimit == 0 && usage.UploadLimit == 0 ? "—" : $"↓ {usage.DownloadLimit} / ↑ {usage.UploadLimit}";
+    public string LimitText => HasRules ? DescribeRule(DownloadLimit, UploadLimit, DownloadLimitEnabled, UploadLimitEnabled, BlockDownload, BlockUpload) : "—";
+    private static string DescribeRule(int down, int up, bool downEnabled, bool upEnabled, bool blockDown, bool blockUp)
+        => $"↓ {Direction(down, downEnabled, blockDown)} / ↑ {Direction(up, upEnabled, blockUp)}";
+    private static string Direction(int value, bool enabled, bool blocked)
+        => blocked ? "Engelli" : value == 0 ? "Sınırsız" : $"{value} KB/sn{(enabled ? "" : " (kapalı)")}";
     public static string FormatRate(double value) => FormatBytes(value) + "/sn";
     private static string FormatBytes(double value) => value >= 1024 * 1024 ? $"{value / 1048576:0.0} MB" : $"{value / 1024:0.0} KB";
 }

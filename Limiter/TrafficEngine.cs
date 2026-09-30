@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Limiter;
@@ -15,15 +15,41 @@ public sealed class TrafficEngine : IDisposable
     private readonly Dictionary<string, AppUsage> _apps = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Dictionary<int, AppUsage>> _processes = new(StringComparer.OrdinalIgnoreCase);
     private readonly TrafficPacer _pacer = new();
-    private sealed record ProcessRule(int DownloadKBps, int UploadKBps, Process Process);
+    private sealed record ProcessRule(AppRule Settings, Process Process);
     private readonly Dictionary<string, Dictionary<int, ProcessRule>> _processRules = new(StringComparer.OrdinalIgnoreCase);
     private PriorityQueue<Packet, long> _pending = new();
     private readonly HashSet<TcpSegmentKey> _queuedSegments = new();
-    private readonly RuleStore _rules = new();
+    private readonly RuleStore _rules;
+
+    public TrafficEngine() : this(new RuleStore()) { }
+    internal TrafficEngine(RuleStore rules) => _rules = rules;
     private nint _flowHandle;
     private nint _networkHandle;
     private volatile bool _running;
     private bool _limiterEnabled = true;
+    private bool _blockerEnabled = true;
+    private long _blockedPackets;
+
+    internal bool BlockerEnabled { get { lock (_sync) return _blockerEnabled; } }
+
+    internal void SetBlockerEnabled(bool enabled)
+    {
+        lock (_sync)
+        {
+            if (_blockerEnabled == enabled) return;
+            _blockerEnabled = enabled;
+            foreach (var path in _pending.UnorderedItems.Select(item => item.Element.Path).Distinct(StringComparer.OrdinalIgnoreCase).ToArray())
+                RetimePath(path);
+        }
+    }
+
+    private bool IsBlocked(string path, int pid, bool outbound)
+    {
+        if (!_blockerEnabled) return false;
+        if (_rules.IsBlocked(path, outbound)) return true;
+        var process = GetProcessRule(path, pid)?.Settings;
+        return outbound ? process?.BlockUpload == true : process?.BlockDownload == true;
+    }
 
     internal bool LimiterEnabled { get { lock (_sync) return _limiterEnabled; } }
 
@@ -65,6 +91,7 @@ public sealed class TrafficEngine : IDisposable
             return $"Canlı izleme · Eşleşen paket: {Interlocked.Read(ref _matchedPackets):N0} / {Interlocked.Read(ref _capturedPackets):N0}" +
                 (Interlocked.Read(ref _droppedByLimit) > 0 ? $" · Kuyruk taşması (toplam): {Interlocked.Read(ref _droppedByLimit):N0}" : "") +
                 (Interlocked.Read(ref _suppressedRetransmits) > 0 ? $" · Tekrar (toplam): {Interlocked.Read(ref _suppressedRetransmits):N0}" : "") +
+                (Interlocked.Read(ref _blockedPackets) > 0 ? $" · Engellenen paket: {Interlocked.Read(ref _blockedPackets):N0}" : "") +
                 (failed > 0 ? $" · Gönderme hatası: {failed:N0}" : "");
         }
     }
@@ -106,12 +133,11 @@ public sealed class TrafficEngine : IDisposable
                 foreach (var process in _processes[app.Path].Values)
                 {
                     UpdateRate(process, elapsed, weight);
-                    var child = CopyUsage(process, rule);
+                    var own = GetProcessRule(process.Path, process.ProcessId);
+                    var child = CopyUsage(process, own?.Settings ?? new AppRule { Path = process.Path });
+                    child.ParentRule = rule;
                     child.AppDownloadLimit = rule.DownloadKBps;
                     child.AppUploadLimit = rule.UploadKBps;
-                    var own = GetProcessRule(process.Path, process.ProcessId);
-                    child.DownloadLimit = own?.DownloadKBps ?? 0;
-                    child.UploadLimit = own?.UploadKBps ?? 0;
                     snapshot.Processes.Add(child);
                 }
                 result.Add(snapshot);
@@ -136,7 +162,9 @@ public sealed class TrafficEngine : IDisposable
         Path = usage.Path, Name = usage.Name, ProcessId = usage.ProcessId,
         DownloadBytes = usage.DownloadBytes, UploadBytes = usage.UploadBytes,
         DownloadRate = usage.DownloadRate, UploadRate = usage.UploadRate,
-        DownloadLimit = rule.DownloadKBps, UploadLimit = rule.UploadKBps
+        DownloadLimit = rule.DownloadKBps, UploadLimit = rule.UploadKBps,
+        DownloadLimitEnabled = rule.DownloadLimitEnabled, UploadLimitEnabled = rule.UploadLimitEnabled,
+        BlockDownload = rule.BlockDownload, BlockUpload = rule.BlockUpload
     };
 
     // Called while holding _sync.
@@ -153,40 +181,50 @@ public sealed class TrafficEngine : IDisposable
 
     public void SetLimits(string path, int downloadKBps, int uploadKBps)
     {
-        ValidateLimits(downloadKBps, uploadKBps);
-        lock (_sync)
-        {
-            var before = _rules.Get(path);
-            _rules.Set(new AppRule { Path = path, DownloadKBps = downloadKBps, UploadKBps = uploadKBps });
-            if (before.DownloadKBps != downloadKBps || before.UploadKBps != uploadKBps) RetimePath(path);
-        }
+        lock (_sync) SetRule(WithLimits(_rules.Get(path), downloadKBps, uploadKBps));
     }
 
     public void SetProcessLimits(string path, int pid, int downloadKBps, int uploadKBps)
     {
-        ValidateLimits(downloadKBps, uploadKBps);
+        lock (_sync) SetRule(WithLimits(GetProcessRule(path, pid)?.Settings ?? new AppRule { Path = path }, downloadKBps, uploadKBps), pid);
+    }
+
+    private static AppRule WithLimits(AppRule rule, int down, int up) => new()
+    {
+        Path = rule.Path, DownloadKBps = down, UploadKBps = up,
+        DownloadLimitEnabled = rule.DownloadLimitEnabled, UploadLimitEnabled = rule.UploadLimitEnabled,
+        BlockDownload = rule.BlockDownload, BlockUpload = rule.BlockUpload
+    };
+
+    internal void SetRule(AppRule settings, int pid = 0)
+    {
+        ValidateLimits(settings.DownloadKBps, settings.UploadKBps);
         lock (_sync)
         {
-            if (!_processRules.TryGetValue(path, out var rules)) _processRules[path] = rules = new();
-            if (downloadKBps == 0 && uploadKBps == 0)
-            {
-                if (rules.Remove(pid, out var removed)) removed.Process.Dispose();
-            }
+            if (pid == 0) _rules.Set(settings);
             else
             {
-                var process = Process.GetProcessById(pid);
-                try
+                if (!_processRules.TryGetValue(settings.Path, out var rules)) _processRules[settings.Path] = rules = new();
+                if (settings.DownloadKBps == 0 && settings.UploadKBps == 0 && !settings.BlockDownload && !settings.BlockUpload)
                 {
-                    // Open a handle now; it identifies this lifetime even if Windows later reuses the PID.
-                    _ = process.Handle;
-                    if (process.HasExited || !string.Equals(process.MainModule?.FileName, path, StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidOperationException("Process kapanmış veya artık bu uygulamaya ait değil.");
-                    if (rules.Remove(pid, out var previous)) previous.Process.Dispose();
-                    rules[pid] = new ProcessRule(downloadKBps, uploadKBps, process);
+                    if (rules.Remove(pid, out var removed)) removed.Process.Dispose();
                 }
-                catch { process.Dispose(); throw; }
+                else
+                {
+                    var process = Process.GetProcessById(pid);
+                    try
+                    {
+                        // Pin this lifetime so a reused PID cannot inherit the rule.
+                        _ = process.Handle;
+                        if (process.HasExited || !string.Equals(process.MainModule?.FileName, settings.Path, StringComparison.OrdinalIgnoreCase))
+                            throw new InvalidOperationException("Process kapanmış veya artık bu uygulamaya ait değil.");
+                        if (rules.Remove(pid, out var previous)) previous.Process.Dispose();
+                        rules[pid] = new ProcessRule(settings, process);
+                    }
+                    catch { process.Dispose(); throw; }
+                }
             }
-            RetimePath(path);
+            RetimePath(settings.Path);
         }
     }
 
@@ -209,7 +247,9 @@ public sealed class TrafficEngine : IDisposable
     {
         if (!_limiterEnabled) return 0;
         var rule = GetProcessRule(path, pid);
-        return rule is null ? 0 : outbound ? rule.UploadKBps : rule.DownloadKBps;
+        return rule is null ? 0 : outbound
+            ? (rule.Settings.UploadLimitEnabled ? rule.Settings.UploadKBps : 0)
+            : (rule.Settings.DownloadLimitEnabled ? rule.Settings.DownloadKBps : 0);
     }
 
     private void RetimePath(string path)
@@ -225,6 +265,12 @@ public sealed class TrafficEngine : IDisposable
                 retained.Enqueue(packet, priority);
                 continue;
             }
+            if (IsBlocked(path, packet.ProcessId, packet.Outbound))
+            {
+                RemovePending(packet);
+                Interlocked.Increment(ref _blockedPackets);
+                continue;
+            }
             int appLimit = GetAppLimit(path, packet.Outbound);
             int processLimit = GetProcessLimit(path, packet.ProcessId, packet.Outbound);
             long due = appLimit == 0 && processLimit == 0 ? ++immediate :
@@ -232,8 +278,7 @@ public sealed class TrafficEngine : IDisposable
                     appLimit, processLimit, now, Stopwatch.Frequency);
             if (due < 0)
             {
-                _pendingBytes -= packet.Data.Length;
-                if (packet.Segment is { } segment) _queuedSegments.Remove(segment);
+                RemovePending(packet);
                 Interlocked.Increment(ref _droppedByLimit);
             }
             else retained.Enqueue(packet with { Due = due }, due);
@@ -241,6 +286,12 @@ public sealed class TrafficEngine : IDisposable
         _pending = retained;
         _wake.Set();
     }
+    private void RemovePending(Packet packet)
+    {
+        _pendingBytes -= packet.Data.Length;
+        if (packet.Segment is { } segment) _queuedSegments.Remove(segment);
+    }
+
     private void FlowLoop()
     {
         var address = new byte[Native.AddressSize];
@@ -297,6 +348,7 @@ public sealed class TrafficEngine : IDisposable
             int matchedPid = 0;
             bool dropForLimit = false;
             bool duplicateInQueue = false;
+            bool blocked = false;
             lock (_sync)
             {
                 if ((_flows.TryGetValue(info.Flow, out var owner) || _tcpFlows.TryGetValue(info.Flow, out owner)) &&
@@ -308,7 +360,9 @@ public sealed class TrafficEngine : IDisposable
                     Interlocked.Increment(ref _matchedPackets);
                     int limit = GetAppLimit(path, outbound);
                     int processLimit = GetProcessLimit(path, owner.ProcessId, outbound);
-                    if ((limit > 0 || processLimit > 0) && !info.IsTcpControl)
+                    blocked = IsBlocked(path, owner.ProcessId, outbound);
+                    if (blocked) Interlocked.Increment(ref _blockedPackets);
+                    if (!blocked && (limit > 0 || processLimit > 0) && !info.IsTcpControl)
                     {
                         if (info.TcpSegment is { } segment && _queuedSegments.Contains(segment))
                         {
@@ -340,7 +394,7 @@ public sealed class TrafficEngine : IDisposable
                     continue;
                 }
             }
-            if (dropForLimit || duplicateInQueue) continue;
+            if (blocked || dropForLimit || duplicateInQueue) continue;
             Send(buffer, (int)length, address, matchedPath, outbound, matchedPid);
         }
     }
@@ -437,6 +491,12 @@ public sealed class TrafficEngine : IDisposable
                     if (!_running || remaining <= 0)
                     {
                         packet = _pending.Dequeue();
+                        if (IsBlocked(packet.Path, packet.ProcessId, packet.Outbound))
+                        {
+                            RemovePending(packet);
+                            Interlocked.Increment(ref _blockedPackets);
+                            continue;
+                        }
                         var owner = new FlowOwner(packet.Path, packet.ProcessId);
                         int appLimit = GetAppLimit(packet.Path, packet.Outbound);
                         int processLimit = GetProcessLimit(packet.Path, packet.ProcessId, packet.Outbound);

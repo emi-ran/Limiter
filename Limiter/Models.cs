@@ -19,6 +19,11 @@ public sealed class AppUsage
     public bool HasRateSample { get; set; }
     public int DownloadLimit { get; set; }
     public int UploadLimit { get; set; }
+    public bool DownloadLimitEnabled { get; set; } = true;
+    public bool UploadLimitEnabled { get; set; } = true;
+    public bool BlockDownload { get; set; }
+    public bool BlockUpload { get; set; }
+    public AppRule? ParentRule { get; set; }
     public int AppDownloadLimit { get; set; }
     public int AppUploadLimit { get; set; }
 }
@@ -28,16 +33,23 @@ public sealed class AppRule
     public string Path { get; set; } = "";
     public int DownloadKBps { get; set; }
     public int UploadKBps { get; set; }
+    public bool DownloadLimitEnabled { get; set; } = true;
+    public bool UploadLimitEnabled { get; set; } = true;
+    public bool BlockDownload { get; set; }
+    public bool BlockUpload { get; set; }
 }
 
 public sealed class RuleStore
 {
-    private readonly string _file = System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Limiter", "rules.json");
+    private readonly string _file;
     private readonly Dictionary<string, AppRule> _rules = new(StringComparer.OrdinalIgnoreCase);
 
-    public RuleStore()
+    public RuleStore() : this(System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Limiter", "rules.json")) { }
+
+    internal RuleStore(string file)
     {
+        _file = file;
         try
         {
             if (File.Exists(_file))
@@ -50,7 +62,12 @@ public sealed class RuleStore
     public AppRule Get(string path) => _rules.TryGetValue(path, out var rule) ? rule : new AppRule { Path = path };
 
     public int GetLimit(string path, bool outbound)
-        => _rules.TryGetValue(path, out var rule) ? (outbound ? rule.UploadKBps : rule.DownloadKBps) : 0;
+        => _rules.TryGetValue(path, out var rule) ? (outbound
+            ? (rule.UploadLimitEnabled ? rule.UploadKBps : 0)
+            : (rule.DownloadLimitEnabled ? rule.DownloadKBps : 0)) : 0;
+
+    internal bool IsBlocked(string path, bool outbound)
+        => _rules.TryGetValue(path, out var rule) && (outbound ? rule.BlockUpload : rule.BlockDownload);
 
     public void Set(AppRule rule)
     {

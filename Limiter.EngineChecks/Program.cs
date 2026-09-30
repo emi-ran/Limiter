@@ -1,8 +1,14 @@
-﻿using System.Buffers.Binary;
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using Limiter;
+
+if (args.Contains("--live-blocker"))
+{
+    await LiveBlockerChecks.Run();
+    return;
+}
 
 static void Require(bool condition, string message)
 {
@@ -119,6 +125,64 @@ using (var toggleEngine = new TrafficEngine())
     Require((long)packetType.GetProperty("Due")!.GetValue(resumedPacket)! > releasedDue, "Re-enabling did not pace the queued packet.");
 }
 Console.WriteLine("Global limiter toggle, queued packet release and rule preservation: OK");
+string ruleTestDirectory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Limiter-checks-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(ruleTestDirectory);
+try
+{
+    string ruleFile = System.IO.Path.Combine(ruleTestDirectory, "rules.json");
+    File.WriteAllText(ruleFile, "[{\"Path\":\"legacy.exe\",\"DownloadKBps\":64,\"UploadKBps\":32}]");
+    var ruleStore = new RuleStore(ruleFile);
+    Require(ruleStore.GetLimit("legacy.exe", false) == 64 && ruleStore.GetLimit("legacy.exe", true) == 32,
+        "Legacy rules lost enabled defaults.");
+    using var directionEngine = new TrafficEngine(ruleStore);
+    var ownPath = Environment.ProcessPath!;
+    int ownPid = Environment.ProcessId;
+    var directionRule = new AppRule { Path = ownPath, DownloadKBps = 64, UploadKBps = 32, DownloadLimitEnabled = false, BlockDownload = true };
+    directionEngine.SetRule(directionRule);
+    Require(ruleStore.GetLimit(ownPath, false) == 0 && ruleStore.GetLimit(ownPath, true) == 32, "Directional limit disable affected the other direction.");
+    var reloaded = new RuleStore(ruleFile);
+    Require(reloaded.Get(ownPath).DownloadKBps == 64 && !reloaded.Get(ownPath).DownloadLimitEnabled && reloaded.Get(ownPath).BlockDownload,
+        "Directional settings or saved value did not survive reload.");
+    const System.Reflection.BindingFlags hidden = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+    var engineType = typeof(TrafficEngine);
+    var blockMethod = engineType.GetMethod("IsBlocked", hidden)!;
+    bool Blocked(int pid, bool outbound) => (bool)blockMethod.Invoke(directionEngine, [ownPath, pid, outbound])!;
+    Require(Blocked(ownPid, false) && !Blocked(ownPid, true), "Download blocker affected upload.");
+    directionEngine.SetLimiterEnabled(false);
+    Require(Blocked(ownPid, false), "Limiter Off disabled the independent blocker.");
+    directionEngine.SetBlockerEnabled(false);
+    Require(!Blocked(ownPid, false), "Global blocker toggle did not bypass the rule.");
+    directionEngine.SetBlockerEnabled(true);
+    directionEngine.SetRule(new AppRule { Path = ownPath });
+    directionEngine.SetRule(new AppRule { Path = ownPath, BlockUpload = true }, ownPid);
+    Require(Blocked(ownPid, true) && !Blocked(ownPid + 100000, true) && !Blocked(ownPid, false), "PID blocker leaked to siblings or download.");
+    var packetType = engineType.GetNestedType("Packet", System.Reflection.BindingFlags.NonPublic)!;
+    long future = Stopwatch.GetTimestamp() + Stopwatch.Frequency;
+    var packet = Activator.CreateInstance(packetType, [new byte[1024], new byte[80], future, ownPath, ownPid, true, null])!;
+    var pendingField = engineType.GetField("_pending", hidden)!;
+    var pending = pendingField.GetValue(directionEngine)!;
+    pending.GetType().GetMethod("Enqueue")!.Invoke(pending, [packet, future]);
+    engineType.GetField("_pendingBytes", hidden)!.SetValue(directionEngine, 1024L);
+    directionEngine.SetRule(new AppRule { Path = ownPath, BlockUpload = true }, ownPid);
+    Require((int)pendingField.GetValue(directionEngine)!.GetType().GetProperty("Count")!.GetValue(pendingField.GetValue(directionEngine))! == 0,
+        "Blocked packet remained queued.");
+    Require((long)engineType.GetField("_pendingBytes", hidden)!.GetValue(directionEngine)! == 0, "Blocked packet left queue bytes behind.");
+    directionEngine.SetRule(new AppRule { Path = ownPath }, ownPid);
+    Require(!Blocked(ownPid, true), "Clearing PID blocker did not restore traffic.");
+    directionEngine.SetRule(new AppRule { Path = ownPath, DownloadKBps = 64, DownloadLimitEnabled = true });
+    Require(ruleStore.GetLimit(ownPath, false) == 64, "Re-enabling did not restore the saved limit.");
+    // Force a persistence failure without touching the real user's rules.
+    string badParent = System.IO.Path.Combine(ruleTestDirectory, "not-a-directory");
+    File.WriteAllText(badParent, "occupied");
+    var failingStore = new RuleStore(System.IO.Path.Combine(badParent, "rules.json"));
+    using var failingEngine = new TrafficEngine(failingStore);
+    bool failed = false;
+    try { failingEngine.SetRule(new AppRule { Path = ownPath, BlockDownload = true }); }
+    catch (IOException) { failed = true; }
+    Require(failed && !failingStore.Get(ownPath).BlockDownload, "Failed persistence changed runtime rules.");
+    Console.WriteLine("Legacy compatibility, directional persistence, independent toggles, PID blocker isolation, queue removal and rejected save: OK");
+}
+finally { Directory.Delete(ruleTestDirectory, true); }
 foreach (int limit in new[] { 16, 500, 1024 })
 {
     long due = 0;

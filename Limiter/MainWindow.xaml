@@ -1,12 +1,12 @@
-﻿<Window x:Class="Limiter.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Limiter 0.13" Height="820" Width="1320" MinWidth="1100" MinHeight="650" Background="#222222" Foreground="#E6E8EB" FontFamily="Segoe UI" FontSize="12" UseLayoutRounding="True">
+<Window x:Class="Limiter.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Limiter 0.14" Height="820" Width="1320" MinWidth="1100" MinHeight="650" Background="#222222" Foreground="#E6E8EB" FontFamily="Segoe UI" FontSize="12" UseLayoutRounding="True">
     <Window.Resources>
         <Style TargetType="TextBlock"><Setter Property="Foreground" Value="#E6E8EB"/></Style>
         <Style TargetType="Button">
             <Setter Property="Background" Value="#168BD2"/><Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="14,9"/><Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
-                <Border x:Name="Surface" Background="{TemplateBinding Background}" CornerRadius="1" Padding="{TemplateBinding Padding}">
+                <Border x:Name="Surface" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
                     <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <ControlTemplate.Triggers>
@@ -16,9 +16,63 @@
             </ControlTemplate></Setter.Value></Setter>
         </Style>
         <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="#E6E8EB"/><Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="12,0"/><Setter Property="Cursor" Value="Hand"/>
-            <Style.Triggers><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/></Trigger></Style.Triggers>
+            <Setter Property="Foreground" Value="#DFE5ED"/><Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="Padding" Value="0,5"/>
+            <Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox">
+                <Border x:Name="SwitchSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True" Margin="0,0,10,0"/>
+                        <TextBlock x:Name="SwitchStatus" Grid.Column="1" Text="Off" Visibility="Collapsed" Foreground="#939EAC" FontSize="10" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <Border x:Name="SwitchTrack" Grid.Column="2" Width="30" Height="18" CornerRadius="9" Background="#444D59" VerticalAlignment="Center">
+                            <Ellipse x:Name="SwitchKnob" Width="12" Height="12" Fill="#CED5DF" HorizontalAlignment="Left" Margin="3,0"/>
+                        </Border>
+                    </Grid>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="Tag" Value="Engine"><Setter TargetName="SwitchStatus" Property="Visibility" Value="Visible"/></Trigger>
+                    <Trigger Property="IsChecked" Value="True">
+                        <Setter TargetName="SwitchTrack" Property="Background" Value="#258FB9"/>
+                        <Setter TargetName="SwitchKnob" Property="HorizontalAlignment" Value="Right"/><Setter TargetName="SwitchKnob" Property="Fill" Value="White"/>
+                        <Setter TargetName="SwitchStatus" Property="Text" Value="On"/><Setter TargetName="SwitchStatus" Property="Foreground" Value="#70CEF0"/>
+                    </Trigger>
+                    <MultiTrigger><MultiTrigger.Conditions><Condition Property="IsChecked" Value="True"/><Condition Property="Tag" Value="Block"/></MultiTrigger.Conditions>
+                        <Setter TargetName="SwitchTrack" Property="Background" Value="#C05A66"/>
+                    </MultiTrigger>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="SwitchSurface" Property="BorderBrush" Value="#657587"/></Trigger>
+                    <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SwitchSurface" Property="BorderBrush" Value="#70CEF0"/></Trigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter TargetName="SwitchSurface" Property="Opacity" Value="0.5"/>
+                        <Setter TargetName="SwitchStatus" Property="Text" Value="Yakında"/><Setter TargetName="SwitchStatus" Property="Visibility" Value="Visible"/>
+                        <Setter TargetName="SwitchTrack" Property="Visibility" Value="Collapsed"/>
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+        <Style x:Key="EngineSwitch" TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+            <Setter Property="Tag" Value="Engine"/><Setter Property="Padding" Value="11,7"/>
+            <Setter Property="Background" Value="#282E36"/><Setter Property="BorderBrush" Value="#3B424C"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+        <Style x:Key="RuleCard" TargetType="Border">
+            <Setter Property="Background" Value="#272C33"/><Setter Property="BorderBrush" Value="#3B424C"/>
+            <Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="14,10"/><Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <Style x:Key="LimitInput" TargetType="TextBox">
+            <Setter Property="Background" Value="#1D2229"/><Setter Property="Foreground" Value="#EDF3FA"/>
+            <Setter Property="BorderBrush" Value="#48515E"/><Setter Property="Padding" Value="10,7"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="13"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TextBox">
+                <Border x:Name="InputSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="5">
+                    <ScrollViewer x:Name="PART_ContentHost" Margin="0"/>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="InputSurface" Property="BorderBrush" Value="#70CEF0"/></Trigger>
+                    <Trigger Property="IsEnabled" Value="False"><Setter TargetName="InputSurface" Property="Opacity" Value="0.5"/></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
         </Style>
         <Style x:Key="ViewTab" TargetType="RadioButton">
             <Setter Property="Foreground" Value="#E6E8EB"/><Setter Property="Padding" Value="14,8"/><Setter Property="Cursor" Value="Hand"/>
@@ -26,7 +80,7 @@
                 <Border x:Name="Tab" Background="Transparent" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border>
                 <ControlTemplate.Triggers>
                     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Tab" Property="Background" Value="#454545"/></Trigger>
-                    <Trigger Property="IsChecked" Value="True"><Setter TargetName="Tab" Property="Background" Value="#C4DF20"/><Setter Property="Foreground" Value="#171717"/></Trigger>
+                    <Trigger Property="IsChecked" Value="True"><Setter TargetName="Tab" Property="Background" Value="#234756"/><Setter Property="Foreground" Value="#8ADDF9"/></Trigger>
                 </ControlTemplate.Triggers>
             </ControlTemplate></Setter.Value></Setter>
         </Style>
@@ -111,7 +165,7 @@
                     <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="İndirme"><Setter TargetName="HeaderHint" Property="Text" Value="3 sn · /sn"/></DataTrigger>
                     <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="Yükleme"><Setter TargetName="HeaderHint" Property="Text" Value="3 sn · /sn"/></DataTrigger>
                     <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="Toplam"><Setter TargetName="HeaderHint" Property="Text" Value="Oturum trafiği"/></DataTrigger>
-                    <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="Hız sınırı"><Setter TargetName="HeaderHint" Property="Text" Value="KB/sn"/></DataTrigger>
+                    <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="Kurallar"><Setter TargetName="HeaderHint" Property="Text" Value="İndirme sınırına göre"/></DataTrigger>
                     <Trigger Property="SortDirection" Value="Ascending">
                         <Setter TargetName="SortArrow" Property="Text" Value="↑"/><Setter TargetName="SortArrow" Property="Foreground" Value="#56C9F5"/>
                         <Setter TargetName="ActiveLine" Property="Visibility" Value="Visible"/><Setter TargetName="HeaderSurface" Property="Background" Value="#263A43"/>
@@ -142,20 +196,19 @@
         </Style>
     </Window.Resources>
     <Grid Background="#222222">
-        <Grid.RowDefinitions><RowDefinition Height="52"/><RowDefinition Height="*"/><RowDefinition Height="34"/></Grid.RowDefinitions>
-        <Border Background="#292929" BorderBrush="#454545" BorderThickness="0,0,0,1" Padding="20,0">
+        <Grid.RowDefinitions><RowDefinition Height="62"/><RowDefinition Height="*"/><RowDefinition Height="34"/></Grid.RowDefinitions>
+        <Border Background="#20252C" BorderBrush="#3B424C" BorderThickness="0,0,0,1" Padding="18,0">
             <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="250"/></Grid.ColumnDefinitions>
-                <TextBlock x:Name="MachineName" Foreground="#C4DF20" FontWeight="Bold" FontSize="15" VerticalAlignment="Center" Margin="0,0,24,0"/>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions>
+                <TextBlock x:Name="MachineName" Foreground="#BDC9D7" FontWeight="SemiBold" FontSize="12" MaxWidth="180" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,20,0"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Units" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <Border BorderBrush="#505050" BorderThickness="1" Padding="10,5" Margin="0,0,14,0"><TextBlock Text="autoByte" ToolTip="Hızlar otomatik KB/sn veya MB/sn olarak gösterilir."/></Border>
-                    <CheckBox Content="Blocker On" IsEnabled="False" IsChecked="False" ToolTip="Blocker henüz kullanıma açık değil."/>
-                    <CheckBox x:Name="LimiterToggle" Content="Limiter On" IsChecked="True" Click="LimiterToggle_Click" ToolTip="Tüm uygulama ve PID hız sınırlarını aç / kapat. Kayıtlı kurallar korunur."/>
-                    <CheckBox Content="Priorities On" IsEnabled="False" IsChecked="False" ToolTip="Priorities sonraki aşamada eklenecek."/>
+
+                    <CheckBox x:Name="BlockerToggle" Content="Blocker" Style="{StaticResource EngineSwitch}" IsChecked="True" Click="BlockerToggle_Click" ToolTip="Tüm uygulama ve PID engellerini aç / kapat. Kurallar korunur."/>
+                    <CheckBox x:Name="LimiterToggle" Content="Limiter" Style="{StaticResource EngineSwitch}" IsChecked="True" Click="LimiterToggle_Click" ToolTip="Tüm uygulama ve PID hız sınırlarını aç / kapat. Kayıtlı kurallar korunur."/>
+                    <CheckBox Content="Priorities" Style="{StaticResource EngineSwitch}" IsEnabled="False" IsChecked="False" ToolTip="Priorities sonraki aşamada eklenecek."/>
                 </StackPanel>
-                <Grid Grid.Column="2" VerticalAlignment="Center">
-                    <TextBox x:Name="SearchBox" Height="34" Padding="30,7,8,7" TextChanged="SearchBox_TextChanged" ToolTip="Uygulama adı veya dosya yoluyla ara"/>
+                <Grid Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <TextBox x:Name="SearchBox" Height="34" Style="{StaticResource LimitInput}" Padding="30,7,8,7" TextChanged="SearchBox_TextChanged" ToolTip="Uygulama adı veya dosya yoluyla ara"/>
                     <TextBlock Text="⌕" FontSize="21" Margin="9,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="#91979F"/>
                     <TextBlock Text="Uygulama ara" Margin="31,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="#91979F">
                         <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
@@ -167,7 +220,7 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" MinWidth="600"/><ColumnDefinition Width="5"/><ColumnDefinition Width="370" MinWidth="300"/></Grid.ColumnDefinitions>
             <Grid>
                 <Grid.RowDefinitions><RowDefinition Height="36"/><RowDefinition Height="46"/><RowDefinition Height="32"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                <Border Background="#383838" BorderBrush="#C4DF20" BorderThickness="0,0,0,1">
+                <Border Background="#292F37" BorderBrush="#3B424C" BorderThickness="0,0,0,1">
                     <StackPanel Orientation="Horizontal">
                         <RadioButton x:Name="ActivityView" Content="Activity" GroupName="View" IsChecked="True" Style="{StaticResource ViewTab}" Checked="View_Click"/>
                         <RadioButton x:Name="RulesView" Content="Rule List" GroupName="View" Style="{StaticResource ViewTab}" Checked="View_Click" ToolTip="Yalnızca hız sınırı tanımlı satırları göster"/>
@@ -213,18 +266,20 @@
                 <DataGridTextColumn Header="İndirme" Binding="{Binding DownloadText}" SortMemberPath="DownloadRate" Width="*" MinWidth="125"/>
                 <DataGridTextColumn Header="Yükleme" Binding="{Binding UploadText}" SortMemberPath="UploadRate" Width="*" MinWidth="125"/>
                 <DataGridTextColumn Header="Toplam" Binding="{Binding TotalText}" SortMemberPath="TotalBytes" Width="0.8*" MinWidth="110"/>
-                <DataGridTextColumn Header="Hız sınırı" Binding="{Binding LimitText}" SortMemberPath="DownloadLimit" Width="*" MinWidth="125"/>
+                <DataGridTextColumn Header="Kurallar" Binding="{Binding LimitText}" SortMemberPath="DownloadLimit" Width="1.5*" MinWidth="155">
+                    <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="TextTrimming" Value="CharacterEllipsis"/><Setter Property="ToolTip" Value="{Binding LimitText}"/></Style></DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
             </DataGrid.Columns>
         </DataGrid>
             </Grid>
         <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#454545" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"/>
         <Grid Grid.Column="2">
             <Grid.RowDefinitions><RowDefinition Height="36"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-            <Border Background="#383838" Padding="14,8"><TextBlock Text="Info View"/></Border>
-            <Border Grid.Row="1" Background="#222222" Padding="16">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Border Background="#292F37" Padding="16,8"><TextBlock Text="UYGULAMA DETAYI" FontSize="10" FontWeight="SemiBold" Foreground="#A3B0C0"/></Border>
+            <Border Grid.Row="1" Background="#20252C" Padding="16">
+                <ScrollViewer VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
-                    <TextBlock Text="Application" Foreground="#00A8E8" FontSize="18" Margin="0,0,0,8"/>
+                    <TextBlock Text="SEÇİLİ UYGULAMA" Foreground="#8D9BAD" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,10"/>
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                         <Image Source="{Binding SelectedItem.Icon, ElementName=AppsGrid}" Width="20" Height="20" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality">
@@ -233,27 +288,57 @@
                         <TextBlock x:Name="SelectedName" Grid.Column="1" Text="Uygulama seçin" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
                     </Grid>
                     <TextBlock x:Name="SelectedPath" Text="Listeden bir uygulama seçin." Foreground="#9298A1" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" Margin="0,7,0,16"/>
-                    <Border Background="#222222" CornerRadius="1" Padding="12,10" Margin="0,0,0,18">
+                    <Border Background="#272C33" CornerRadius="6" Padding="12,8" Margin="0,0,0,14">
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions><RowDefinition Height="24"/><RowDefinition Height="24"/><RowDefinition Height="24"/></Grid.RowDefinitions>
+                            <Grid.RowDefinitions><RowDefinition Height="20"/><RowDefinition Height="20"/><RowDefinition Height="20"/></Grid.RowDefinitions>
                             <TextBlock Text="↓ İndirme" Foreground="#8CCB78"/><TextBlock x:Name="SelectedDownload" Grid.Column="1" Text="—"/>
                             <TextBlock Grid.Row="1" Text="↑ Yükleme" Foreground="#73BAEA"/><TextBlock x:Name="SelectedUpload" Grid.Row="1" Grid.Column="1" Text="—"/>
                             <TextBlock Grid.Row="2" Text="Toplam trafik" Foreground="#9298A1"/><TextBlock x:Name="SelectedTotal" Grid.Row="2" Grid.Column="1" Text="—"/>
                         </Grid>
                     </Border>
-                    <TextBlock Text="Rules · Hız sınırları" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                    <TextBlock x:Name="SelectedRule" Text="—" Foreground="#73BAEA" Margin="0,0,0,8"/>
+                    <TextBlock Text="Trafik kuralları" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                    <TextBlock x:Name="SelectedRule" Text="—" Foreground="#73BAEA" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="RuleRuntime" Foreground="#D9B97F" Height="32" LineHeight="16" LineStackingStrategy="BlockLineHeight" TextTrimming="CharacterEllipsis" FontSize="11" Margin="0,0,0,8" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
                     <TextBlock x:Name="RuleScope" Text="Kural kapsamı seçilen satıra göre belirlenir." Foreground="#9298A1" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10"/>
                     <TextBlock x:Name="ParentRule" Text="" Foreground="#D9B97F" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8">
                         <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers></Style></TextBlock.Style>
                     </TextBlock>
                     <StackPanel x:Name="RuleControls" IsEnabled="False">
-                        <TextBlock Text="İndirme · KB/sn" Foreground="#B8BEC6" Margin="0,0,0,5"/><TextBox x:Name="DownloadBox" Text="0" Margin="0,0,0,12"/>
-                        <TextBlock Text="Yükleme · KB/sn" Foreground="#B8BEC6" Margin="0,0,0,5"/><TextBox x:Name="UploadBox" Text="0" Margin="0,0,0,10"/>
-                        <TextBlock Text="0 = bu kapsamda sınır yok · En az 16 KB/sn" Foreground="#9298A1" FontSize="11" Margin="0,0,0,14"/>
-                        <Button Content="Uygula" Click="Save_Click"/>
-                        <Button Content="Sınırları kaldır" Click="ClearLimits_Click" Background="#454545" Margin="0,8,0,0"/>
+                        <Border Style="{StaticResource RuleCard}">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,10">
+                                    <Border DockPanel.Dock="Right" Background="#392B32" CornerRadius="4" Padding="7,3"><TextBlock Text="ENGELLEME" Foreground="#DA929C" FontSize="9" FontWeight="SemiBold"/></Border>
+                                    <TextBlock Text="Blocker" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                </DockPanel>
+                                <CheckBox x:Name="BlockDownload" Tag="Block" Content="↓  İndirme" Click="RuleToggle_Click" ToolTip="Bu kapsamda indirme trafiğini engelle"/>
+                                <Border Height="1" Background="#39414C" Margin="0,4"/>
+                                <CheckBox x:Name="BlockUpload" Tag="Block" Content="↑  Yükleme" Click="RuleToggle_Click" ToolTip="Bu kapsamda yükleme trafiğini engelle"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource RuleCard}">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,10">
+                                    <Border DockPanel.Dock="Right" Background="#243D49" CornerRadius="4" Padding="7,3"><TextBlock Text="KB/sn" Foreground="#88CFE9" FontSize="10"/></Border>
+                                    <TextBlock Text="Hız sınırı" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                </DockPanel>
+                                <Grid>
+                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="12"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="90"/></Grid.ColumnDefinitions>
+                                    <CheckBox x:Name="DownloadEnabled" Content="↓  İndirme" IsChecked="True" Click="RuleToggle_Click" ToolTip="Sınırı aç / kapat. Kaydedilen değer korunur."/>
+                                    <TextBox x:Name="DownloadBox" Grid.Column="2" Style="{StaticResource LimitInput}" Text="0" ToolTip="İndirme sınırı · KB/sn"/>
+                                    <CheckBox x:Name="UploadEnabled" Grid.Row="2" Content="↑  Yükleme" IsChecked="True" Click="RuleToggle_Click" ToolTip="Sınırı aç / kapat. Kaydedilen değer korunur."/>
+                                    <TextBox x:Name="UploadBox" Grid.Row="2" Grid.Column="2" Style="{StaticResource LimitInput}" Text="0" ToolTip="Yükleme sınırı · KB/sn"/>
+                                </Grid>
+                                <TextBlock Text="0 = sınırsız · Minimum 16 KB/sn" Foreground="#8D9BAD" FontSize="10" Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Text="Anahtarlar anında, hız değerleri Uygula ile kaydedilir." Foreground="#8D9BAD" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <Button Content="Uygula" Click="Save_Click" Padding="14,10" Background="#258FB9"/>
+                            <Button Grid.Column="2" Content="Sınırları kaldır" Click="ClearLimits_Click" Background="#343C47" Padding="12,10"/>
+                        </Grid>
                     </StackPanel>
                     <TextBlock x:Name="RuleMessage" Foreground="#8CCB78" Margin="0,10,0,0" TextWrapping="Wrap">
                         <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers></Style></TextBlock.Style>
@@ -265,7 +350,7 @@
         </Grid>
         <Border Grid.Row="2" Background="#292929" BorderBrush="#454545" BorderThickness="0,1,0,0" Padding="18,0">
             <DockPanel VerticalAlignment="Center">
-                <TextBlock x:Name="LimiterState" Text="Sınırlar etkin" Foreground="#C4DF20" FontSize="11" DockPanel.Dock="Right" Margin="20,0,0,0"/>
+                <TextBlock x:Name="LimiterState" Text="Limiter On · Blocker On" Foreground="#C4DF20" FontSize="11" DockPanel.Dock="Right" Margin="20,0,0,0"/>
                 <TextBlock Text="3 sn ortalama · KB = 1024 bayt" Foreground="#9298A1" FontSize="10" DockPanel.Dock="Right"/>
                 <TextBlock x:Name="StatusText" Text="Başlatılıyor..." Foreground="#9298A1" FontSize="10" TextTrimming="CharacterEllipsis"/>
             </DockPanel>
