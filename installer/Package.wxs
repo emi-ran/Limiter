@@ -1,0 +1,47 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="Limiter" Manufacturer="emi-ran" Version="$(Version)" UpgradeCode="5F8B3272-221F-49E3-BD25-6E4DFF087972" Scope="perMachine">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Limiter is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+    <Icon Id="LimiterIcon" SourceFile="$(IconPath)" />
+    <Property Id="ARPPRODUCTICON" Value="LimiterIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/emi-ran/Limiter" />
+    <Property Id="STARTWITHWINDOWS" Secure="yes" />
+    <Property Id="DESKTOPSHORTCUT" Secure="yes" />
+    <Property Id="INSTALLLEVEL" Value="1" />
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <Property Id="INSTALLFOLDER" Secure="yes" />
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="Limiter">
+        <Component Id="ApplicationExecutable" Guid="*">
+          <File Id="LimiterExe" Source="$(PublishDirectory)\Limiter.exe" KeyPath="yes">
+            <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="Limiter" Advertise="yes" WorkingDirectory="INSTALLFOLDER" Icon="LimiterIcon" />
+          </File>
+        </Component>
+        <Component Id="DesktopShortcut" Guid="*">
+          <RegistryValue Root="HKLM" Key="Software\Limiter\Installer" Name="DesktopShortcut" Value="1" Type="integer" KeyPath="yes" />
+          <Shortcut Id="DesktopShortcutLink" Directory="DesktopFolder" Name="Limiter" Target="[#LimiterExe]" WorkingDirectory="INSTALLFOLDER" Icon="LimiterIcon" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+    <StandardDirectory Id="DesktopFolder" />
+    <Feature Id="Desktop" Title="Desktop shortcut" Level="2">
+      <Level Value="1" Condition="DESKTOPSHORTCUT = &quot;1&quot;" />
+      <ComponentRef Id="DesktopShortcut" />
+    </Feature>
+    <Feature Id="Main" Title="Limiter">
+      <ComponentRef Id="ApplicationExecutable" />
+      <Files Directory="INSTALLFOLDER" Include="$(PublishDirectory)\**">
+        <Exclude Files="$(PublishDirectory)\Limiter.exe" />
+      </Files>
+    </Feature>
+    <UIRef Id="LimiterUI" />
+    <CustomAction Id="EnableWindowsStartup" FileRef="LimiterExe" ExeCommand="--installer-startup &quot;[UserSID]&quot;" Execute="commit" Impersonate="no" Return="check" />
+    <CustomAction Id="RemoveWindowsStartup" FileRef="LimiterExe" ExeCommand="--installer-remove-startup" Execute="deferred" Impersonate="no" Return="check" />
+    <InstallExecuteSequence>
+      <Custom Action="EnableWindowsStartup" Before="InstallFinalize" Condition="STARTWITHWINDOWS = &quot;1&quot; AND NOT Installed AND NOT REMOVE" />
+      <Custom Action="RemoveWindowsStartup" Before="RemoveFiles" Condition="Installed AND REMOVE = &quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+    </InstallExecuteSequence>
+    <WixVariable Id="WixUILicenseRtf" Value="$(LicenseRtf)" />
+  </Package>
+</Wix>

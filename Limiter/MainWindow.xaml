@@ -1,5 +1,5 @@
 <Window x:Class="Limiter.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Limiter"
-        Title="Limiter 0.14" Height="820" Width="1320" MinWidth="1100" MinHeight="650" Background="#222222" Foreground="#E6E8EB" FontFamily="Segoe UI" FontSize="12" UseLayoutRounding="True">
+        Title="Limiter 0.14.1" Icon="Assets/Limiter.ico" Height="820" Width="1320" MinWidth="1100" MinHeight="650" Background="#222222" Foreground="#E6E8EB" FontFamily="Segoe UI" FontSize="12" UseLayoutRounding="True">
     <Window.Resources>
         <Style TargetType="TextBlock"><Setter Property="Foreground" Value="#E6E8EB"/></Style>
         <Style TargetType="Button">

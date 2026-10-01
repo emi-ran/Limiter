@@ -12,13 +12,22 @@ Windows için uygulama ve process (PID) bazında ağ trafiği izleme, hız sın�
 
 ## Başlangıç
 
-Windows x64, [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) ve yönetici yetkisi gerekir.
+Windows x64 ve yönetici yetkisi gerekir. Yeni CI paketlerinde .NET çalışma zamanı dahildir; eski sürümler [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) gerektirebilir.
 
-1. [Releases](https://github.com/emi-ran/Limiter/releases) bölümündeki Windows x64 ZIP paketini bir klasöre çıkarın. Daha güncel derlemeler için [Actions](https://github.com/emi-ran/Limiter/actions) içindeki başarılı çalışmanın `Limiter-win-x64` artifact paketini kullanabilirsiniz.
-2. Açık Limiter penceresi varsa kapatın, `Limiter.exe` dosyasını çalıştırın ve yönetici iznini onaylayın. WinDivert sürücüsü bu yetkiyi gerektirir.
+1. [Releases](https://github.com/emi-ran/Limiter/releases) bölümünden bir paket indirin. Daha güncel derlemeler için [Actions](https://github.com/emi-ran/Limiter/actions) içindeki başarılı çalışmanın `Limiter-win-x64-packages` artifact paketini kullanabilirsiniz.
+2. Açık Limiter penceresi varsa kapatın, Başlat menüsünden Limiter'ı veya portable EXE dosyasını çalıştırıp yönetici iznini onaylayın. WinDivert sürücüsü bu yetkiyi gerektirir.
 3. Bir uygulamada ağ trafiği başlatın ve listeden uygulamayı seçin. İndirme / yükleme sınırını **KB/sn** olarak girip **Uygula** düğmesine basın.
 
-`0` sınırsızdır; en küçük pozitif sınır `16 KB/sn` olur. `WinDivert.dll` ve `WinDivert64.sys` dosyalarını çalıştırılabilir dosyanın yanında tutun.
+| Paket | Kullanım |
+| --- | --- |
+| `Limiter-<sürüm>-setup-win-x64.exe` | MSI ile aynı sihirbazı kullanan EXE kurulum paketi. |
+| `Limiter-<sürüm>-win-x64.msi` | Windows Installer kurulum paketi. |
+| `Limiter-<sürüm>-portable-win-x64.exe` | Kurulum gerektirmeyen tek EXE. Bağımlılıklar ilk açılışta .NET önbelleğine çıkarılır. |
+| `Limiter-<sürüm>-portable-win-x64.zip` | Klasöre çıkarıp `Limiter.exe` dosyasını çalıştırın; DLL ve sürücü dosyalarını birlikte tutun. |
+
+İki installer da kurulum klasörü, isteğe bağlı masaüstü kısayolu ve kuran kullanıcı için **Windows ile başlat** seçeneklerini sunar. İki seçenek varsayılan kapalıdır; Başlat menüsü kısayolu her zaman oluşturulur. Başlangıç, Ayarlar ile aynı yönetici yetkili Görev Zamanlayıcı kaydını kullanır. Kaldırma işlemi kurulu EXE'yi hedefleyen başlangıç görevlerini temizler; kişisel ayarları ve kuralları korur. Sessiz MSI kurulumunda seçenekleri açmak için `DESKTOPSHORTCUT=1 STARTWITHWINDOWS=1` verin.
+
+`SHA256SUMS.txt`, paketlerin doğrulama özetlerini içerir. Portable sürümler de ayarları ve kuralları `%LOCALAPPDATA%\Limiter` altında saklar. `0` sınırsızdır; en küçük pozitif sınır `16 KB/sn` olur.
 
 ## Trafik ve kurallar
 
@@ -56,10 +65,18 @@ Başlangıç seçeneği ayrı bir Windows servisi değildir. Yönetici olmayan h
 git clone https://github.com/emi-ran/Limiter.git
 cd Limiter
 dotnet build Limiter/Limiter.csproj -c Release
-dotnet publish Limiter/Limiter.csproj -c Release -r win-x64 --self-contained false -o dist
+dotnet publish Limiter/Limiter.csproj -c Release -r win-x64 --self-contained true -o dist
 ```
 
-`dist\Limiter.exe` dosyasını çalıştırın. Bu paket .NET Desktop Runtime gerektirir.
+`dist\Limiter.exe` dosyasını çalıştırın; .NET çalışma zamanı pakete dahildir. Bütün dağıtım paketlerini oluşturmak için:
+
+```powershell
+dotnet tool restore
+dotnet tool run wix -- extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.BootstrapperApplications.wixext/5.0.2
+./installer/Build-Packages.ps1 -PublishDirectory dist
+```
+
+Paketler `artifacts/packages` klasörüne yazılır. WiX 5.0.2 sürümü araç manifestinde sabitlenmiştir.
 
 ## Kontroller
 
@@ -86,9 +103,9 @@ Bu kontrol yalnızca kendi test process'ini engeller, geçici kural dosyası kul
 
 ## CI ve sürümler
 
-[Windows CI](https://github.com/emi-ran/Limiter/actions/workflows/windows.yml), `main` push'larında, pull request'lerde ve elle başlatıldığında Release derlemesi ve çekirdek kontrollerini çalıştırır. Windows x64 ZIP paketi, iki README ve görsellerle birlikte `Limiter-win-x64` artifact'ına yüklenir; 14 gün saklanır. Canlı engelleme testi CI'da çalışmaz.
+[Windows CI](https://github.com/emi-ran/Limiter/actions/workflows/windows.yml), `main` push'larında, pull request'lerde ve elle başlatıldığında Release derlemesi ve çekirdek kontrollerini çalıştırır. .NET dahil EXE/MSI installer, portable EXE, portable ZIP ve SHA-256 özetleri `Limiter-win-x64-packages` artifact'ına yüklenir; 14 gün saklanır. Paketlerde iki README, görseller ve lisans bildirimleri bulunur. Canlı engelleme testi CI'da çalışmaz.
 
-**GitHub Release yalnızca sürüm etiketi push edildiğinde yayınlanır** (örneğin `v0.14` veya `v0.14.1`). Normal `main` push'u Release oluşturmaz. Etiketlemeden önce İngilizce sürüm notlarını `docs/releases/<etiket>.md` dosyasına yazıp commit edin. Notlar yoksa veya boşsa etiketli derleme başarısız olur. Kontroller geçtikten sonra ZIP ve bu sürüm notları yayınlanır. [v0.14 sürüm notları](docs/releases/v0.14.md). Yeni sürüm için örnek:
+**GitHub Release yalnızca sürüm etiketi push edildiğinde yayınlanır** (örneğin `v0.14` veya `v0.14.1`). Normal `main` push'u Release oluşturmaz. Etiketlemeden önce İngilizce sürüm notlarını `docs/releases/<etiket>.md` dosyasına yazıp commit edin. Notlar yoksa veya boşsa etiketli derleme başarısız olur. Kontroller geçtikten sonra dört paket, doğrulama özetleri ve bu sürüm notları yayınlanır. Etiket proje Version değeriyle eşleşmelidir; örneğin v0.14, 0.14.0 ile eşleşir. [v0.14 sürüm notları](docs/releases/v0.14.md). Yeni sürüm için örnek:
 
 ```powershell
 git tag v0.14
@@ -103,6 +120,7 @@ Etiketi yayınlayacağınız sürüm numarasıyla değiştirin; bu komutlar belg
 | --- | --- |
 | `Limiter/` | WPF arayüzü, trafik motoru, kurallar, ayarlar, dil kaynakları ve Windows başlangıç kaydı |
 | `Limiter.EngineChecks/` | Çekirdek kontrolleri ve isteğe bağlı canlı UDP testi |
+| `installer/` | WiX kurulum tanımları, paketleme betiği ve paket kontrolleri |
 | `docs/images/` | Örnek verilerle oluşturulmuş arayüz görselleri |
 | `vendor/WinDivert-2.2.2-A/` | WinDivert yerel bileşenleri ve lisansı |
 | `.github/workflows/windows.yml` | Windows derleme, kontrol, paketleme ve etiketli Release |

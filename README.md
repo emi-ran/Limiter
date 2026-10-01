@@ -12,13 +12,22 @@ Monitor, limit and block network traffic by application or process (PID) on Wind
 
 ## Getting started
 
-Requires Windows x64, [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) and administrator privileges.
+Requires Windows x64 and administrator privileges. New CI packages include the .NET runtime; older releases may require the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
 
-1. Extract a Windows x64 ZIP from [Releases](https://github.com/emi-ran/Limiter/releases). For newer builds, download the `Limiter-win-x64` artifact from a successful [Actions](https://github.com/emi-ran/Limiter/actions) run.
-2. Close any existing Limiter window, run `Limiter.exe` and approve the administrator prompt. The WinDivert driver requires elevation.
+1. Download a package from [Releases](https://github.com/emi-ran/Limiter/releases). For newer builds, download the `Limiter-win-x64-packages` artifact from a successful [Actions](https://github.com/emi-ran/Limiter/actions) run.
+2. Close any existing Limiter window, open Limiter from the Start menu or run the portable executable and approve the administrator prompt. The WinDivert driver requires elevation.
 3. Generate network traffic in an application, select it in the list, enter download / upload limits in **KB/s**, and click **Apply**.
 
-`0` means unlimited; the minimum positive limit is `16 KB/s`. Keep `WinDivert.dll` and `WinDivert64.sys` alongside the executable.
+| Package | Usage |
+| --- | --- |
+| `Limiter-<version>-setup-win-x64.exe` | Installer with the same wizard as the MSI. |
+| `Limiter-<version>-win-x64.msi` | Windows Installer package. |
+| `Limiter-<version>-portable-win-x64.exe` | Single executable; run without installing. Dependencies extract into the .NET cache on first launch. |
+| `Limiter-<version>-portable-win-x64.zip` | Extract the folder and run `Limiter.exe`. Keep its DLL and driver files together. |
+
+Both installers offer an installation folder, an optional desktop shortcut and **Start with Windows** for the installing user. Both options default to off; a Start menu shortcut is always installed. Startup uses the same elevated Task Scheduler entry as Settings. Uninstall removes startup tasks pointing to the installed executable and preserves user settings and rules. For silent MSI installation, pass `DESKTOPSHORTCUT=1 STARTWITHWINDOWS=1` to enable the options.
+
+`SHA256SUMS.txt` contains package hashes. Portable builds still store settings and rules under `%LOCALAPPDATA%\Limiter`. `0` means unlimited; the minimum positive limit is `16 KB/s`.
 
 ## Traffic and rules
 
@@ -56,10 +65,18 @@ On Windows with the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.
 git clone https://github.com/emi-ran/Limiter.git
 cd Limiter
 dotnet build Limiter/Limiter.csproj -c Release
-dotnet publish Limiter/Limiter.csproj -c Release -r win-x64 --self-contained false -o dist
+dotnet publish Limiter/Limiter.csproj -c Release -r win-x64 --self-contained true -o dist
 ```
 
-Run `dist\Limiter.exe`. This package requires the .NET Desktop Runtime.
+Run `dist\Limiter.exe`. This includes the .NET runtime. To build all distribution packages:
+
+```powershell
+dotnet tool restore
+dotnet tool run wix -- extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.BootstrapperApplications.wixext/5.0.2
+./installer/Build-Packages.ps1 -PublishDirectory dist
+```
+
+Packages are written to `artifacts/packages`. WiX 5.0.2 is pinned in the tool manifest.
 
 ## Checks
 
@@ -86,9 +103,9 @@ This test blocks only its own test process, uses a temporary rules file, and sen
 
 ## CI and releases
 
-[Windows CI](https://github.com/emi-ran/Limiter/actions/workflows/windows.yml) builds in Release mode and runs engine checks on `main` pushes, pull requests and manual runs. It uploads a Windows x64 ZIP containing both READMEs and their images as the `Limiter-win-x64` artifact, retained for 14 days. The live blocking test is not run in CI.
+[Windows CI](https://github.com/emi-ran/Limiter/actions/workflows/windows.yml) builds in Release mode and runs engine checks on `main` pushes, pull requests and manual runs. It creates self-contained EXE/MSI installers, a portable EXE, a portable ZIP and SHA-256 checksums in the `Limiter-win-x64-packages` artifact, retained for 14 days. Packages include both READMEs, screenshots and license notices. The live blocking test is not run in CI.
 
-**GitHub Releases are published only when a version tag is pushed** (for example, `v0.14` or `v0.14.1`). A regular `main` push does not create a Release. Write English release notes in `docs/releases/<tag>.md` and commit them before tagging. Missing or empty notes fail the tagged build. After checks pass, the ZIP and those release notes are published. See [v0.14 release notes](docs/releases/v0.14.md). Example for a new version:
+**GitHub Releases are published only when a version tag is pushed** (for example, `v0.14` or `v0.14.1`). A regular `main` push does not create a Release. Write English release notes in `docs/releases/<tag>.md` and commit them before tagging. Missing or empty notes fail the tagged build. After checks pass, all four packages, checksums and those release notes are published. The tag must match the project Version; v0.14 matches 0.14.0. See [v0.14 release notes](docs/releases/v0.14.md). Example for a new version:
 
 ```powershell
 git tag v0.14
@@ -103,6 +120,7 @@ Replace the tag with the version you intend to publish; these commands are docum
 | --- | --- |
 | `Limiter/` | WPF interface, traffic engine, rules, settings, language resources and Windows startup registration |
 | `Limiter.EngineChecks/` | Engine checks and optional live UDP test |
+| `installer/` | WiX installer definitions, packaging script and package smoke checks |
 | `docs/images/` | Interface previews rendered with sample data |
 | `vendor/WinDivert-2.2.2-A/` | Native WinDivert components and license |
 | `.github/workflows/windows.yml` | Windows build, checks, packaging and tagged Releases |

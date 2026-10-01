@@ -1,0 +1,10 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal">
+  <Bundle Name="Limiter" Manufacturer="emi-ran" Version="$(Version)" UpgradeCode="2A16CA06-69D4-43E4-B4D9-16B1AB02BA27" IconSourceFile="$(IconPath)">
+    <BootstrapperApplication>
+      <bal:WixInternalUIBootstrapperApplication Theme="standard" />
+    </BootstrapperApplication>
+    <Chain>
+      <MsiPackage SourceFile="$(MsiPath)" bal:PrimaryPackageType="default" />
+    </Chain>
+  </Bundle>
+</Wix>

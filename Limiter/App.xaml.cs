@@ -9,6 +9,37 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        if (e.Args.SequenceEqual(new[] { "--verify-package" }))
+        {
+            try
+            {
+                foreach (string file in new[] { "WinDivert.dll", "WinDivert64.sys", "LICENSE", "NOTICE", "WinDivert-LICENSE.txt" })
+                    if (!System.IO.File.Exists(System.IO.Path.Combine(AppContext.BaseDirectory, file)))
+                        throw new System.IO.FileNotFoundException(file);
+                if (!Native.WinDivertHelperParseIPv6Address("::1", new byte[16]))
+                    throw new InvalidOperationException("WinDivert native library check failed.");
+                Shutdown(0);
+            }
+            catch (Exception ex) { Console.Error.WriteLine(ex.Message); Shutdown(1); }
+            return;
+        }
+        if (e.Args.Length > 0 && e.Args[0] == "--installer-startup")
+        {
+            try
+            {
+                if (e.Args.Length != 2) throw new ArgumentException("A user SID is required.");
+                StartupRegistration.EnableForUser(e.Args[1]);
+                Shutdown(0);
+            }
+            catch (Exception ex) { Console.Error.WriteLine(ex.Message); Shutdown(1); }
+            return;
+        }
+        if (e.Args.SequenceEqual(new[] { "--installer-remove-startup" }))
+        {
+            try { StartupRegistration.RemoveForInstalledExecutable(); Shutdown(0); }
+            catch (Exception ex) { Console.Error.WriteLine(ex.Message); Shutdown(1); }
+            return;
+        }
         try { Localization.Current.SetLanguage(new SettingsStore().Load().Language); }
         catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
         { Localization.Current.SetLanguage("system"); } // MainWindow reports unreadable settings.
@@ -20,6 +51,7 @@ public partial class App : Application
             return;
         }
         base.OnStartup(e);
+        new MainWindow().Show();
     }
 
     protected override void OnExit(ExitEventArgs e)

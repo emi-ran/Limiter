@@ -18,7 +18,7 @@ concurrency:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - name: Validate release notes
@@ -40,19 +40,37 @@ jobs:
       - name: Check traffic engine
         run: dotnet run --project Limiter.EngineChecks/Limiter.EngineChecks.csproj -c Release --no-build
       - name: Publish Windows x64
-        run: dotnet publish Limiter/Limiter.csproj -c Release -r win-x64 --self-contained false -o artifacts/publish
-      - name: Package
+        run: dotnet publish Limiter/Limiter.csproj -c Release -r win-x64 --self-contained true -p:DebugType=None -p:DebugSymbols=false -o artifacts/publish
+      - name: Restore installer tools
         shell: pwsh
         run: |
-          Copy-Item README.md, README.tr.md artifacts/publish/
-          New-Item -ItemType Directory -Path artifacts/publish/docs/images -Force | Out-Null
-          Copy-Item docs/images/*.png artifacts/publish/docs/images/
-          Copy-Item docs/releases artifacts/publish/docs/ -Recurse
-          Compress-Archive -Path artifacts/publish/* -DestinationPath artifacts/Limiter-win-x64.zip
+          dotnet tool restore
+          if ($LASTEXITCODE -ne 0) { throw 'WiX restore failed' }
+          dotnet tool run wix -- extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.BootstrapperApplications.wixext/5.0.2
+          if ($LASTEXITCODE -ne 0) { throw 'WiX extension restore failed' }
+      - name: Build installers and portable package
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+        run: ./installer/Build-Packages.ps1
+      - name: Check packages, desktop shortcut and startup task
+        shell: pwsh
+        run: ./installer/Test-Packages.ps1 -Install
+      - name: Upload installer diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-diagnostics
+          path: artifacts/packages/*.log
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
-          name: Limiter-win-x64
-          path: artifacts/Limiter-win-x64.zip
+          name: Limiter-win-x64-packages
+          path: |
+            artifacts/packages/*.exe
+            artifacts/packages/*.msi
+            artifacts/packages/*portable*.zip
+            artifacts/packages/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
 
@@ -67,11 +85,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: Limiter-win-x64
+          name: Limiter-win-x64-packages
           path: artifacts
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release create "$RELEASE_TAG" artifacts/Limiter-win-x64.zip --verify-tag --title "Limiter ${RELEASE_TAG#v}" --notes-file "docs/releases/$RELEASE_TAG.md"
+        run: gh release create "$RELEASE_TAG" artifacts/*.exe artifacts/*.msi artifacts/*portable*.zip artifacts/SHA256SUMS.txt --verify-tag --title "Limiter ${RELEASE_TAG#v}" --notes-file "docs/releases/$RELEASE_TAG.md"
