@@ -1,0 +1,30 @@
+Limiter
+Copyright (C) 2026 emi-ran
+Original project: https://github.com/emi-ran/Limiter
+
+The original Limiter code and documentation are licensed under version 3
+of the GNU General Public License, with the attribution preservation term
+below. See LICENSE for the unmodified GPLv3 text. Third-party components
+retain their own licenses and copyright notices.
+
+Limiter is distributed WITHOUT ANY WARRANTY, including the implied
+warranties of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See LICENSE for the complete terms.
+
+Additional attribution preservation term (GPLv3 section 7(b))
+-----------------------------------------------------------
+When conveying copies or modified versions containing material from this
+project, preserve the following author attribution in the source material
+and in accompanying legal notices for binary distributions:
+
+    Based on Limiter by emi-ran.
+    Original project: https://github.com/emi-ran/Limiter
+    Copyright (C) 2026 emi-ran
+
+This attribution may be included in NOTICE, a README, or equivalent legal
+documentation distributed with the work. It does not require advertising,
+a particular interface, or endorsement by the original author. Modified
+versions must also identify their changes as required by GPLv3 section 5.
+
+This term applies only to material whose copyright is held by emi-ran.
+It does not impose additional conditions on third-party components.

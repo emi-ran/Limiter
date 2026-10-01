@@ -85,14 +85,14 @@ public sealed class TrafficEngine : IDisposable
         get
         {
             int error = Volatile.Read(ref _networkError);
-            if (error != 0) return $"Paket izleme durdu (Windows hata {error})";
-            if (!_running) return "İzleme kapalı";
+            if (error != 0) return Localization.T("packet-monitoring-stopped-windows-error-0", error);
+            if (!_running) return Localization.T("monitoring-off");
             long failed = Interlocked.Read(ref _sendFailures);
-            return $"Canlı izleme · Eşleşen paket: {Interlocked.Read(ref _matchedPackets):N0} / {Interlocked.Read(ref _capturedPackets):N0}" +
-                (Interlocked.Read(ref _droppedByLimit) > 0 ? $" · Kuyruk taşması (toplam): {Interlocked.Read(ref _droppedByLimit):N0}" : "") +
-                (Interlocked.Read(ref _suppressedRetransmits) > 0 ? $" · Tekrar (toplam): {Interlocked.Read(ref _suppressedRetransmits):N0}" : "") +
-                (Interlocked.Read(ref _blockedPackets) > 0 ? $" · Engellenen paket: {Interlocked.Read(ref _blockedPackets):N0}" : "") +
-                (failed > 0 ? $" · Gönderme hatası: {failed:N0}" : "");
+            return Localization.T("live-monitoring-matched-packets-0-n0-1-n0", Interlocked.Read(ref _matchedPackets), Interlocked.Read(ref _capturedPackets)) +
+                (Interlocked.Read(ref _droppedByLimit) > 0 ? Localization.T("queue-overflow-total-0-n0", Interlocked.Read(ref _droppedByLimit)) : "") +
+                (Interlocked.Read(ref _suppressedRetransmits) > 0 ? Localization.T("retransmissions-total-0-n0", Interlocked.Read(ref _suppressedRetransmits)) : "") +
+                (Interlocked.Read(ref _blockedPackets) > 0 ? Localization.T("blocked-packets-0-n0", Interlocked.Read(ref _blockedPackets)) : "") +
+                (failed > 0 ? Localization.T("send-errors-0-n0", failed) : "");
         }
     }
 
@@ -100,13 +100,13 @@ public sealed class TrafficEngine : IDisposable
     {
         _flowHandle = Native.WinDivertOpen("true", 2, 0, 5); // sniff + recv only
         if (_flowHandle == Native.InvalidHandle)
-            throw new InvalidOperationException($"Bağlantı izleyicisi açılamadı (Windows hata {Marshal.GetLastWin32Error()}).");
+            throw new InvalidOperationException(Localization.T("could-not-open-flow-monitor-windows-error-0", Marshal.GetLastWin32Error()));
         _networkHandle = Native.WinDivertOpen("(ip or ipv6) and (tcp or udp) and !loopback", 0, 0, 0);
         if (_networkHandle == Native.InvalidHandle)
         {
             var error = Marshal.GetLastWin32Error();
             Native.WinDivertClose(_flowHandle);
-            throw new InvalidOperationException($"Paket izleyicisi açılamadı (Windows hata {error}).");
+            throw new InvalidOperationException(Localization.T("could-not-open-packet-monitor-windows-error-0", error));
         }
         _running = true;
         _lastSnapshotTicks = Stopwatch.GetTimestamp();
@@ -217,7 +217,7 @@ public sealed class TrafficEngine : IDisposable
                         // Pin this lifetime so a reused PID cannot inherit the rule.
                         _ = process.Handle;
                         if (process.HasExited || !string.Equals(process.MainModule?.FileName, settings.Path, StringComparison.OrdinalIgnoreCase))
-                            throw new InvalidOperationException("Process kapanmış veya artık bu uygulamaya ait değil.");
+                            throw new InvalidOperationException(Localization.T("the-process-has-exited-or-no-longer-belongs-to-this-application"));
                         if (rules.Remove(pid, out var previous)) previous.Process.Dispose();
                         rules[pid] = new ProcessRule(settings, process);
                     }
@@ -231,7 +231,7 @@ public sealed class TrafficEngine : IDisposable
     private static void ValidateLimits(int download, int upload)
     {
         if (download < 0 || upload < 0 || (download > 0 && download < 16) || (upload > 0 && upload < 16))
-            throw new ArgumentOutOfRangeException(nameof(download), "0 veya en az 16 KB/sn yazın.");
+            throw new ArgumentOutOfRangeException(nameof(download), Localization.T("enter-0-or-at-least-16-kb-s"));
     }
 
     private ProcessRule? GetProcessRule(string path, int pid)

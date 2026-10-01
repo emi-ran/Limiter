@@ -21,6 +21,15 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Validate release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v\d+\.\d+(\.\d+)?$') { throw 'Expected a version tag such as v0.14 or v0.14.1.' }
+          $notes = "docs/releases/$env:RELEASE_TAG.md"
+          if (!(Test-Path -LiteralPath $notes) -or [string]::IsNullOrWhiteSpace((Get-Content -LiteralPath $notes -Raw))) { throw "Missing release notes: $notes" }
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
@@ -35,7 +44,10 @@ jobs:
       - name: Package
         shell: pwsh
         run: |
-          Copy-Item README.md artifacts/publish/README.md
+          Copy-Item README.md, README.tr.md artifacts/publish/
+          New-Item -ItemType Directory -Path artifacts/publish/docs/images -Force | Out-Null
+          Copy-Item docs/images/*.png artifacts/publish/docs/images/
+          Copy-Item docs/releases artifacts/publish/docs/ -Recurse
           Compress-Archive -Path artifacts/publish/* -DestinationPath artifacts/Limiter-win-x64.zip
       - uses: actions/upload-artifact@v4
         with:
@@ -52,6 +64,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: Limiter-win-x64
@@ -61,4 +74,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release create "$RELEASE_TAG" artifacts/Limiter-win-x64.zip --verify-tag --title "Limiter ${RELEASE_TAG#v}" --generate-notes
+        run: gh release create "$RELEASE_TAG" artifacts/Limiter-win-x64.zip --verify-tag --title "Limiter ${RELEASE_TAG#v}" --notes-file "docs/releases/$RELEASE_TAG.md"

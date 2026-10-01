@@ -1,0 +1,394 @@
+{
+  "no-rules": {
+    "tr": "Kural yok",
+    "en": "No rules"
+  },
+  "activity": {
+    "tr": "Etkinlik",
+    "en": "Activity"
+  },
+  "rule-list": {
+    "tr": "Kural listesi",
+    "en": "Rule List"
+  },
+  "settings": {
+    "tr": "Ayarlar",
+    "en": "Settings"
+  },
+  "language": {
+    "tr": "Dil",
+    "en": "Language"
+  },
+  "system-language": {
+    "tr": "Sistem dili",
+    "en": "System language"
+  },
+  "start-with-windows": {
+    "tr": "Windows ile başlat",
+    "en": "Start with Windows"
+  },
+  "general": {
+    "tr": "Genel",
+    "en": "General"
+  },
+  "preferences": {
+    "tr": "Tercihler",
+    "en": "Preferences"
+  },
+  "settings-saved": {
+    "tr": "Ayarlar kaydedildi.",
+    "en": "Settings saved."
+  },
+  "could-not-save-settings": {
+    "tr": "Ayarlar kaydedilemedi: ",
+    "en": "Could not save settings: "
+  },
+  "startup-setting-updated": {
+    "tr": "Başlangıç ayarı güncellendi.",
+    "en": "Startup setting updated."
+  },
+  "could-not-change-startup-setting": {
+    "tr": "Başlangıç ayarı değiştirilemedi: ",
+    "en": "Could not change startup setting: "
+  },
+  "english-is-used-when-the-system-language-is-not-turkish-or-english": {
+    "tr": "Sistem dili Türkçe veya İngilizce değilse English kullanılır.",
+    "en": "English is used when the system language is not Turkish or English."
+  },
+  "starts-elevated-when-you-sign-in-re-enable-this-option-if-you-move-the": {
+    "tr": "Oturum açıldığında yönetici yetkisiyle başlatır. Uygulamayı taşırsanız bu seçeneği yeniden etkinleştirin.",
+    "en": "Starts elevated when you sign in. Re-enable this option if you move the application."
+  },
+  "language-changes-take-effect-immediately": {
+    "tr": "Dil değişikliği hemen uygulanır.",
+    "en": "Language changes take effect immediately."
+  },
+  "0-unlimited-minimum-16-kb-s": {
+    "tr": "0 = sınırsız · Minimum 16 KB/sn",
+    "en": "0 = unlimited · Minimum 16 KB/s"
+  },
+  "0-kb-s": {
+    "tr": "0 KB/sn",
+    "en": "0 KB/s"
+  },
+  "0-applications": {
+    "tr": "0 uygulama",
+    "en": "0 applications"
+  },
+  "3-s-average-kb-1024-bytes": {
+    "tr": "3 sn ortalama · KB = 1024 bayt",
+    "en": "3 s average · KB = 1024 bytes"
+  },
+  "switches-apply-immediately-click-apply-to-save-speed-values": {
+    "tr": "Anahtarlar anında, hız değerleri Uygula ile kaydedilir.",
+    "en": "Switches apply immediately; click Apply to save speed values."
+  },
+  "starting": {
+    "tr": "Başlatılıyor...",
+    "en": "Starting..."
+  },
+  "click-a-header-to-change": {
+    "tr": "Başlığa tıklayarak değiştir",
+    "en": "Click a header to change"
+  },
+  "computer-traffic": {
+    "tr": "Bilgisayar trafiği",
+    "en": "Computer traffic"
+  },
+  "block-download-traffic-for-this-scope": {
+    "tr": "Bu kapsamda indirme trafiğini engelle",
+    "en": "Block download traffic for this scope"
+  },
+  "block-upload-traffic-for-this-scope": {
+    "tr": "Bu kapsamda yükleme trafiğini engelle",
+    "en": "Block upload traffic for this scope"
+  },
+  "blocking": {
+    "tr": "ENGELLEME",
+    "en": "BLOCKING"
+  },
+  "speed-limit": {
+    "tr": "Hız sınırı",
+    "en": "Speed limit"
+  },
+  "kb-s": {
+    "tr": "KB/sn",
+    "en": "KB/s"
+  },
+  "rule-scope-depends-on-the-selected-row": {
+    "tr": "Kural kapsamı seçilen satıra göre belirlenir.",
+    "en": "Rule scope depends on the selected row."
+  },
+  "rules": {
+    "tr": "Kurallar",
+    "en": "Rules"
+  },
+  "select-an-application-from-the-list": {
+    "tr": "Listeden bir uygulama seçin.",
+    "en": "Select an application from the list."
+  },
+  "priorities-will-be-added-later": {
+    "tr": "Priorities sonraki aşamada eklenecek.",
+    "en": "Priorities will be added later."
+  },
+  "show-hide-processes": {
+    "tr": "Process'leri göster / gizle",
+    "en": "Show / hide processes"
+  },
+  "selected-application": {
+    "tr": "SEÇİLİ UYGULAMA",
+    "en": "SELECTED APPLICATION"
+  },
+  "remove-limits": {
+    "tr": "Sınırları kaldır",
+    "en": "Remove limits"
+  },
+  "enable-disable-the-limit-saved-values-are-preserved": {
+    "tr": "Sınırı aç / kapat. Kaydedilen değer korunur.",
+    "en": "Enable / disable the limit. Saved values are preserved."
+  },
+  "total": {
+    "tr": "Toplam",
+    "en": "Total"
+  },
+  "total-traffic": {
+    "tr": "Toplam trafik",
+    "en": "Total traffic"
+  },
+  "traffic-rules": {
+    "tr": "Trafik kuralları",
+    "en": "Traffic rules"
+  },
+  "enable-disable-all-application-and-pid-blocks-rules-are-preserved": {
+    "tr": "Tüm uygulama ve PID engellerini aç / kapat. Kurallar korunur.",
+    "en": "Enable / disable all application and PID blocks. Rules are preserved."
+  },
+  "enable-disable-all-application-and-pid-limits-saved-rules-are-preserve": {
+    "tr": "Tüm uygulama ve PID hız sınırlarını aç / kapat. Kayıtlı kurallar korunur.",
+    "en": "Enable / disable all application and PID limits. Saved rules are preserved."
+  },
+  "application-details": {
+    "tr": "UYGULAMA DETAYI",
+    "en": "APPLICATION DETAILS"
+  },
+  "apply": {
+    "tr": "Uygula",
+    "en": "Apply"
+  },
+  "application": {
+    "tr": "Uygulama",
+    "en": "Application"
+  },
+  "application-name": {
+    "tr": "Uygulama adı",
+    "en": "Application name"
+  },
+  "search-by-application-name-or-file-path": {
+    "tr": "Uygulama adı veya dosya yoluyla ara",
+    "en": "Search by application name or file path"
+  },
+  "search-applications": {
+    "tr": "Uygulama ara",
+    "en": "Search applications"
+  },
+  "select-an-application": {
+    "tr": "Uygulama seçin",
+    "en": "Select an application"
+  },
+  "show-only-rows-with-saved-rules": {
+    "tr": "Yalnızca hız sınırı tanımlı satırları göster",
+    "en": "Show only rows with saved rules"
+  },
+  "upload": {
+    "tr": "Yükleme",
+    "en": "Upload"
+  },
+  "upload-limit-kb-s": {
+    "tr": "Yükleme sınırı · KB/sn",
+    "en": "Upload limit · KB/s"
+  },
+  "download": {
+    "tr": "İndirme",
+    "en": "Download"
+  },
+  "download-limit-kb-s": {
+    "tr": "İndirme sınırı · KB/sn",
+    "en": "Download limit · KB/s"
+  },
+  "upload-2": {
+    "tr": "↑  Yükleme",
+    "en": "↑  Upload"
+  },
+  "upload-3": {
+    "tr": "↑ Yükleme",
+    "en": "↑ Upload"
+  },
+  "download-2": {
+    "tr": "↓  İndirme",
+    "en": "↓  Download"
+  },
+  "download-3": {
+    "tr": "↓ İndirme",
+    "en": "↓ Download"
+  },
+  "download-highest-first": {
+    "tr": "↓  İndirme · Yüksekten düşüğe",
+    "en": "↓  Download · Highest first"
+  },
+  "soon": {
+    "tr": "Yakında",
+    "en": "Soon"
+  },
+  "3-s-s": {
+    "tr": "3 sn · /sn",
+    "en": "3 s · /s"
+  },
+  "session-traffic": {
+    "tr": "Oturum trafiği",
+    "en": "Session traffic"
+  },
+  "by-download-limit": {
+    "tr": "İndirme sınırına göre",
+    "en": "By download limit"
+  },
+  "click-to-sort-click-again-to-reverse-the-direction": {
+    "tr": "Sıralamak için tıklayın. Tekrar tıklayınca artan / azalan yön değişir.",
+    "en": "Click to sort. Click again to reverse the direction."
+  },
+  "enter-0-or-at-least-16-kb-s": {
+    "tr": "0 veya en az 16 KB/sn yazın.",
+    "en": "Enter 0 or at least 16 KB/s."
+  },
+  "blocker-off-blocking-paused": {
+    "tr": "Blocker Off · Engelleme duraklatıldı.",
+    "en": "Blocker Off · Blocking paused."
+  },
+  "total-for-all-processes-of-this-application": {
+    "tr": "Bu uygulamanın tüm process'lerinin toplamı.",
+    "en": "Total for all processes of this application."
+  },
+  "lowest-first": {
+    "tr": "Düşükten yükseğe",
+    "en": "Lowest first"
+  },
+  "rule-updated": {
+    "tr": "Kural güncellendi.",
+    "en": "Rule updated."
+  },
+  "limiter-off-speed-limits-paused": {
+    "tr": "Limiter Off · Hız sınırları duraklatıldı.",
+    "en": "Limiter Off · Speed limits paused."
+  },
+  "pid-limit-removed": {
+    "tr": "PID sınırı kaldırıldı.",
+    "en": "PID limit removed."
+  },
+  "unlimited": {
+    "tr": "Sınırsız",
+    "en": "Unlimited"
+  },
+  "inherited-from-application": {
+    "tr": "Uygulamadan devralınan: ",
+    "en": "Inherited from application: "
+  },
+  "application-limit-removed": {
+    "tr": "Uygulamanın toplam sınırı kaldırıldı.",
+    "en": "Application limit removed."
+  },
+  "application-limit-saved": {
+    "tr": "Uygulamanın toplam sınırı kaydedildi.",
+    "en": "Application limit saved."
+  },
+  "highest-first": {
+    "tr": "Yüksekten düşüğe",
+    "en": "Highest first"
+  },
+  "select-an-application-first": {
+    "tr": "Önce bir uygulama seçin.",
+    "en": "Select an application first."
+  },
+  "download-limit": {
+    "tr": "İndirme sınırı",
+    "en": "Download limit"
+  },
+  "could-not-start-monitoring": {
+    "tr": "İzleme başlatılamadı: ",
+    "en": "Could not start monitoring: "
+  },
+  "could-not-save": {
+    "tr": "Kaydedilemedi: ",
+    "en": "Could not save: "
+  },
+  "blocked": {
+    "tr": "Engelli",
+    "en": "Blocked"
+  },
+  "disabled": {
+    "tr": " (kapalı)",
+    "en": " (disabled)"
+  },
+  "monitoring-off": {
+    "tr": "İzleme kapalı",
+    "en": "Monitoring off"
+  },
+  "the-process-has-exited-or-no-longer-belongs-to-this-application": {
+    "tr": "Process kapanmış veya artık bu uygulamaya ait değil.",
+    "en": "The process has exited or no longer belongs to this application."
+  },
+  "limiter-is-already-running-close-the-existing-window-first": {
+    "tr": "Limiter zaten açık. Önce eski pencereyi kapatın.",
+    "en": "Limiter is already running. Close the existing window first."
+  },
+  "0-applications-1-processes": {
+    "tr": "{0} uygulama · {1} process",
+    "en": "{0} applications · {1} processes"
+  },
+  "saved-for-pid-0-only": {
+    "tr": "Yalnızca PID {0} için kaydedildi.",
+    "en": "Saved for PID {0} only."
+  },
+  "pid-0-only-expires-when-the-process-exits": {
+    "tr": "Yalnızca PID {0} · Process kapanınca sona erer.",
+    "en": "PID {0} only · Expires when the process exits."
+  },
+  "0-kb-s-1": {
+    "tr": "{0} KB/sn{1}",
+    "en": "{0} KB/s{1}"
+  },
+  "packet-monitoring-stopped-windows-error-0": {
+    "tr": "Paket izleme durdu (Windows hata {0})",
+    "en": "Packet monitoring stopped (Windows error {0})"
+  },
+  "live-monitoring-matched-packets-0-n0-1-n0": {
+    "tr": "Canlı izleme · Eşleşen paket: {0:N0} / {1:N0}",
+    "en": "Live monitoring · Matched packets: {0:N0} / {1:N0}"
+  },
+  "queue-overflow-total-0-n0": {
+    "tr": " · Kuyruk taşması (toplam): {0:N0}",
+    "en": " · Queue overflow (total): {0:N0}"
+  },
+  "retransmissions-total-0-n0": {
+    "tr": " · Tekrar (toplam): {0:N0}",
+    "en": " · Retransmissions (total): {0:N0}"
+  },
+  "blocked-packets-0-n0": {
+    "tr": " · Engellenen paket: {0:N0}",
+    "en": " · Blocked packets: {0:N0}"
+  },
+  "send-errors-0-n0": {
+    "tr": " · Gönderme hatası: {0:N0}",
+    "en": " · Send errors: {0:N0}"
+  },
+  "could-not-open-flow-monitor-windows-error-0": {
+    "tr": "Bağlantı izleyicisi açılamadı (Windows hata {0}).",
+    "en": "Could not open flow monitor (Windows error {0})."
+  },
+  "could-not-open-packet-monitor-windows-error-0": {
+    "tr": "Paket izleyicisi açılamadı (Windows hata {0}).",
+    "en": "Could not open packet monitor (Windows error {0})."
+  },
+  "startup-executable-required": {
+    "tr": "Windows başlangıcını ayarlamak için Limiter.exe dosyasını açın.",
+    "en": "Open Limiter.exe to configure Windows startup."
+  }
+}

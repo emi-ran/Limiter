@@ -18,10 +18,24 @@ public partial class MainWindow : Window
     private ListSortDirection _sortDirection = ListSortDirection.Descending;
     private string _search = "";
     private bool _rulesOnly;
+    private readonly SettingsStore _settingsStore;
+    private UserSettings _settings = new();
+    private bool _startupEnabled;
 
-    public MainWindow()
+    public MainWindow() : this(new SettingsStore()) { }
+
+    internal MainWindow(SettingsStore settingsStore)
     {
+        _settingsStore = settingsStore;
+        string? settingsError = null;
+        try { _settings = _settingsStore.Load(); }
+        catch (Exception ex) when (ex is System.IO.IOException or System.UnauthorizedAccessException or System.Text.Json.JsonException)
+        { settingsError = ex.Message; }
+        Localization.Current.SetLanguage(_settings.Language);
         InitializeComponent();
+        LanguageChoice.SelectedValue = _settings.Language;
+        if (settingsError is not null) SettingsMessage.Text = Localization.T("could-not-save-settings") + settingsError;
+        UpdateSortDescription();
         MachineName.Text = Environment.MachineName.ToUpperInvariant();
         AppsGrid.ItemsSource = _rows;
         CollectionViewSource.GetDefaultView(_rows).Filter = item => item is AppRow row &&
@@ -38,7 +52,7 @@ public partial class MainWindow : Window
                 _timer.Tick += (_, _) => RefreshRows();
                 _timer.Start();
             }
-            catch (Exception ex) { StatusText.Text = "İzleme başlatılamadı: " + ex.Message; }
+            catch (Exception ex) { StatusText.Text = Localization.T("could-not-start-monitoring") + ex.Message; }
         };
         Closed += (_, _) => { _timer.Stop(); _engine.Dispose(); };
     }
@@ -63,7 +77,7 @@ public partial class MainWindow : Window
         }
         ReorderRows();
         if (_rulesOnly) CollectionViewSource.GetDefaultView(_rows).Refresh();
-        AppCount.Text = $"{_rowByPath.Count} uygulama · {_rowByPath.Values.Sum(row => row.Children.Count)} process";
+        AppCount.Text = Localization.T("0-applications-1-processes", _rowByPath.Count, _rowByPath.Values.Sum(row => row.Children.Count));
         UpdateSelectedTraffic();
     }
 
@@ -88,9 +102,73 @@ public partial class MainWindow : Window
 
     private void View_Click(object sender, RoutedEventArgs e)
     {
+        if (SettingsPanel is null) return;
+        bool settings = ReferenceEquals(sender, SettingsView);
+        SettingsPanel.Visibility = settings ? Visibility.Visible : Visibility.Collapsed;
+        var trafficVisibility = settings ? Visibility.Collapsed : Visibility.Visible;
+        TrafficSummary.Visibility = SortingPanel.Visibility = AppsGrid.Visibility = trafficVisibility;
+        DetailsPanel.Visibility = DetailsSplitter.Visibility = trafficVisibility;
+        if (settings)
+        {
+            try
+            {
+                _startupEnabled = StartupRegistration.IsEnabled();
+                StartWithWindows.IsChecked = _startupEnabled;
+                StartWithWindows.IsEnabled = true;
+            }
+            catch (Exception ex)
+            {
+                StartWithWindows.IsEnabled = false;
+                SettingsMessage.Text = Localization.T("could-not-change-startup-setting") + ex.Message;
+            }
+            return;
+        }
         _rulesOnly = ReferenceEquals(sender, RulesView);
         if (AppsGrid?.ItemsSource is null) return;
         CollectionViewSource.GetDefaultView(_rows).Refresh();
+    }
+
+    private void ApplySettings_Click(object sender, RoutedEventArgs e)
+    {
+        string preference = LanguageChoice.SelectedValue as string ?? "system";
+        try
+        {
+            var next = _settings with { Language = preference };
+            _settingsStore.Save(next);
+            _settings = next;
+            Localization.Current.SetLanguage(preference);
+            foreach (var row in _rowByPath.Values)
+            {
+                row.RefreshLanguage();
+                foreach (var child in row.Children.Values) child.RefreshLanguage();
+            }
+            UpdateSortDescription();
+            RuleMessage.Text = "";
+            if (AppsGrid.SelectedItem is null) AppsGrid_SelectionChanged(AppsGrid, null!);
+            RefreshRows();
+            SettingsMessage.Text = Localization.T("settings-saved");
+        }
+        catch (Exception ex)
+        {
+            LanguageChoice.SelectedValue = _settings.Language;
+            SettingsMessage.Text = Localization.T("could-not-save-settings") + ex.Message;
+        }
+    }
+
+    private void Startup_Click(object sender, RoutedEventArgs e)
+    {
+        bool enabled = StartWithWindows.IsChecked == true;
+        try
+        {
+            StartupRegistration.SetEnabled(enabled);
+            _startupEnabled = enabled;
+            SettingsMessage.Text = Localization.T("startup-setting-updated");
+        }
+        catch (Exception ex)
+        {
+            StartWithWindows.IsChecked = _startupEnabled;
+            SettingsMessage.Text = Localization.T("could-not-change-startup-setting") + ex.Message;
+        }
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -107,15 +185,15 @@ public partial class MainWindow : Window
             SelectedDownload.Text = row.DownloadText;
             SelectedUpload.Text = row.UploadText;
             SelectedTotal.Text = row.TotalText;
-            SelectedRule.Text = row.HasRules ? row.LimitText : "Kural yok";
+            SelectedRule.Text = row.HasRules ? row.LimitText : Localization.T("no-rules");
             RuleRuntime.Text = string.Join(Environment.NewLine, new[]
             {
-                !_engine.LimiterEnabled ? "Limiter Off · Hız sınırları duraklatıldı." : "",
-                !_engine.BlockerEnabled ? "Blocker Off · Engelleme duraklatıldı." : ""
+                !_engine.LimiterEnabled ? Localization.T("limiter-off-speed-limits-paused") : "",
+                !_engine.BlockerEnabled ? Localization.T("blocker-off-blocking-paused") : ""
             }.Where(message => message.Length > 0));
             RuleScope.Text = row.IsProcess
-                ? $"Yalnızca PID {row.ProcessId} · Process kapanınca sona erer."
-                : "Bu uygulamanın tüm process'lerinin toplamı.";
+                ? Localization.T("pid-0-only-expires-when-the-process-exits", row.ProcessId)
+                : Localization.T("total-for-all-processes-of-this-application");
             ParentRule.Text = row.ParentRuleText;
 
         }
@@ -140,16 +218,16 @@ public partial class MainWindow : Window
     {
         string label = _sortProperty switch
         {
-            nameof(AppRow.DownloadRate) => "İndirme",
-            nameof(AppRow.UploadRate) => "Yükleme",
-            nameof(AppRow.TotalBytes) => "Toplam trafik",
-            nameof(AppRow.DownloadLimit) => "İndirme sınırı",
-            _ => "Uygulama adı"
+            nameof(AppRow.DownloadRate) => Localization.T("download"),
+            nameof(AppRow.UploadRate) => Localization.T("upload"),
+            nameof(AppRow.TotalBytes) => Localization.T("total-traffic"),
+            nameof(AppRow.DownloadLimit) => Localization.T("download-limit"),
+            _ => Localization.T("application-name")
         };
         bool ascending = _sortDirection == ListSortDirection.Ascending;
         string direction = _sortProperty == nameof(AppRow.Name)
             ? (ascending ? "A → Z" : "Z → A")
-            : (ascending ? "Düşükten yükseğe" : "Yüksekten düşüğe");
+            : (ascending ? Localization.T("lowest-first") : Localization.T("highest-first"));
         SortDescription.Text = $"{(ascending ? "↑" : "↓")}  {label} · {direction}";
     }
 
@@ -217,11 +295,11 @@ public partial class MainWindow : Window
     {
         if (AppsGrid.SelectedItem is not AppRow row)
         {
-            SelectedName.Text = "Uygulama seçin";
-            SelectedPath.Text = "Listeden bir uygulama seçin.";
+            SelectedName.Text = Localization.T("select-an-application");
+            SelectedPath.Text = Localization.T("select-an-application-from-the-list");
             SelectedDownload.Text = SelectedUpload.Text = SelectedTotal.Text = "—";
             SelectedRule.Text = "—";
-            RuleScope.Text = "Kural kapsamı seçilen satıra göre belirlenir.";
+            RuleScope.Text = Localization.T("rule-scope-depends-on-the-selected-row");
             ParentRule.Text = "";
             RuleRuntime.Text = "";
             RuleControls.IsEnabled = false;
@@ -239,17 +317,17 @@ public partial class MainWindow : Window
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (AppsGrid.SelectedItem is not AppRow row) { RuleMessage.Text = "Önce bir uygulama seçin."; return; }
+        if (AppsGrid.SelectedItem is not AppRow row) { RuleMessage.Text = Localization.T("select-an-application-first"); return; }
         if (!int.TryParse(DownloadBox.Text, out int down) || !int.TryParse(UploadBox.Text, out int up) ||
             (down != 0 && down < 16) || (up != 0 && up < 16) || down < 0 || up < 0)
-        { RuleMessage.Text = "0 veya en az 16 KB/sn yazın."; return; }
+        { RuleMessage.Text = Localization.T("enter-0-or-at-least-16-kb-s"); return; }
         try
         {
             _engine.SetRule(ReadRule(row, down, up), row.IsProcess ? row.ProcessId : 0);
-            RuleMessage.Text = row.IsProcess ? $"Yalnızca PID {row.ProcessId} için kaydedildi." : "Uygulamanın toplam sınırı kaydedildi.";
+            RuleMessage.Text = row.IsProcess ? Localization.T("saved-for-pid-0-only", row.ProcessId) : Localization.T("application-limit-saved");
             RefreshRows();
         }
-        catch (Exception ex) { RuleMessage.Text = "Kaydedilemedi: " + ex.Message; }
+        catch (Exception ex) { RuleMessage.Text = Localization.T("could-not-save") + ex.Message; }
     }
 
     private void LoadRuleChecks(AppRow row)
@@ -273,13 +351,13 @@ public partial class MainWindow : Window
         try
         {
             _engine.SetRule(ReadRule(row, row.DownloadLimit, row.UploadLimit), row.IsProcess ? row.ProcessId : 0);
-            RuleMessage.Text = "Kural güncellendi.";
+            RuleMessage.Text = Localization.T("rule-updated");
             RefreshRows();
         }
         catch (Exception ex)
         {
             LoadRuleChecks(row);
-            RuleMessage.Text = "Kaydedilemedi: " + ex.Message;
+            RuleMessage.Text = Localization.T("could-not-save") + ex.Message;
         }
     }
 
@@ -292,10 +370,10 @@ public partial class MainWindow : Window
                 row.IsProcess ? row.ProcessId : 0);
             DownloadEnabled.IsChecked = UploadEnabled.IsChecked = true;
             DownloadBox.Text = UploadBox.Text = "0";
-            RuleMessage.Text = row.IsProcess ? "PID sınırı kaldırıldı." : "Uygulamanın toplam sınırı kaldırıldı.";
+            RuleMessage.Text = row.IsProcess ? Localization.T("pid-limit-removed") : Localization.T("application-limit-removed");
             RefreshRows();
         }
-        catch (Exception ex) { RuleMessage.Text = "Kaydedilemedi: " + ex.Message; }
+        catch (Exception ex) { RuleMessage.Text = Localization.T("could-not-save") + ex.Message; }
     }
 }
 
@@ -344,6 +422,11 @@ public sealed class AppRow(AppUsage initialUsage, AppRow? parent = null) : INoti
         if (oldTotal != TotalText) Notify(nameof(TotalText));
         if (oldLimit != LimitText) Notify(nameof(LimitText));
     }
+    internal void RefreshLanguage()
+    {
+        Notify(nameof(Name)); Notify(nameof(DownloadText)); Notify(nameof(UploadText));
+        Notify(nameof(TotalText)); Notify(nameof(LimitText)); Notify(nameof(ParentRuleText));
+    }
     private void Notify(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     public string Path => usage.Path;
     public string Name => IsProcess ? $"Process {ProcessId}" : usage.Name;
@@ -360,7 +443,7 @@ public sealed class AppRow(AppUsage initialUsage, AppRow? parent = null) : INoti
     public bool BlockUpload => usage.BlockUpload;
     public bool HasRules => DownloadLimit > 0 || UploadLimit > 0 || BlockDownload || BlockUpload;
     public string ParentRuleText => usage.ParentRule is { } rule && (rule.DownloadKBps > 0 || rule.UploadKBps > 0 || rule.BlockDownload || rule.BlockUpload)
-        ? "Uygulamadan devralınan: " + DescribeRule(rule.DownloadKBps, rule.UploadKBps, rule.DownloadLimitEnabled, rule.UploadLimitEnabled, rule.BlockDownload, rule.BlockUpload) : "";
+        ? Localization.T("inherited-from-application") + DescribeRule(rule.DownloadKBps, rule.UploadKBps, rule.DownloadLimitEnabled, rule.UploadLimitEnabled, rule.BlockDownload, rule.BlockUpload) : "";
     public string DownloadText => FormatRate(usage.DownloadRate);
     public string UploadText => FormatRate(usage.UploadRate);
     public string TotalText => FormatBytes(usage.DownloadBytes + usage.UploadBytes);
@@ -368,7 +451,7 @@ public sealed class AppRow(AppUsage initialUsage, AppRow? parent = null) : INoti
     private static string DescribeRule(int down, int up, bool downEnabled, bool upEnabled, bool blockDown, bool blockUp)
         => $"↓ {Direction(down, downEnabled, blockDown)} / ↑ {Direction(up, upEnabled, blockUp)}";
     private static string Direction(int value, bool enabled, bool blocked)
-        => blocked ? "Engelli" : value == 0 ? "Sınırsız" : $"{value} KB/sn{(enabled ? "" : " (kapalı)")}";
-    public static string FormatRate(double value) => FormatBytes(value) + "/sn";
+        => blocked ? Localization.T("blocked") : value == 0 ? Localization.T("unlimited") : Localization.T("0-kb-s-1", value, enabled ? "" : Localization.T("disabled"));
+    public static string FormatRate(double value) => FormatBytes(value) + (Localization.Current.Language == "tr" ? "/sn" : "/s");
     private static string FormatBytes(double value) => value >= 1024 * 1024 ? $"{value / 1048576:0.0} MB" : $"{value / 1024:0.0} KB";
 }

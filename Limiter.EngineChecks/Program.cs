@@ -33,6 +33,35 @@ static byte[] TcpPacket(bool inbound, int payloadLength)
     return packet;
 }
 
+Require(Localization.ResolveLanguage("system", "tr-TR") == "tr", "Turkish system language ignored.");
+Require(Localization.ResolveLanguage("system", "en-GB") == "en", "English system language ignored.");
+Require(Localization.ResolveLanguage("system", "de-DE") == "en", "Unsupported system language did not fall back to English.");
+Require(Localization.ResolveLanguage("en", "tr-TR") == "en" && Localization.ResolveLanguage("tr", "en-US") == "tr", "Explicit language preference ignored.");
+string settingsDirectory = Path.Combine(Path.GetTempPath(), "Limiter-settings-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(settingsDirectory);
+try
+{
+    var settingsStore = new SettingsStore(Path.Combine(settingsDirectory, "settings.json"));
+    Require(settingsStore.Load().Language == "system", "First launch must follow system language.");
+    settingsStore.Save(new UserSettings { Language = "en" });
+    Require(settingsStore.Load().Language == "en", "Language preference did not survive reload.");
+    settingsStore.Save(new UserSettings { Language = "tr" });
+    Require(settingsStore.Load().Language == "tr", "Turkish preference did not survive reload.");
+    settingsStore.Save(new UserSettings { Language = "unsupported" });
+    Require(settingsStore.Load().Language == "system", "Invalid saved language did not fall back to system.");
+    Localization.Current.SetLanguage("en");
+    Require(Localization.T("download") == "Download", "English resource missing.");
+    Localization.Current.SetLanguage("tr");
+    Require(Localization.T("download") == "İndirme", "Turkish resource missing.");
+    string occupied = Path.Combine(settingsDirectory, "occupied");
+    File.WriteAllText(occupied, "occupied");
+    bool rejected = false;
+    try { new SettingsStore(Path.Combine(occupied, "settings.json")).Save(new UserSettings { Language = "en" }); }
+    catch (IOException) { rejected = true; }
+    Require(rejected && File.ReadAllText(occupied) == "occupied", "Failed settings save was not rejected safely.");
+}
+finally { Directory.Delete(settingsDirectory, true); }
+Console.WriteLine("Language defaults, system fallback, explicit overrides, settings reload and rejected save: OK");
 var inbound = TcpPacket(true, 1200);
 Require(PacketInfo.TryParse(inbound, false, out var incoming), "Inbound TCP could not be parsed.");
 var expected = new FlowKey(PacketInfo.MappedV4(new byte[] { 192, 168, 1, 3 }), 50000,
