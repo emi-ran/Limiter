@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.AccessControl;
 using Limiter;
 
 if (args.Contains("--live-blocker"))
@@ -36,38 +37,64 @@ static byte[] TcpPacket(bool inbound, int payloadLength)
 // Windows ACL policy regression cases require no elevated writes to Program Files.
 static void CheckStartupSecurity()
 {
-    static System.Security.AccessControl.DirectorySecurity Security(string sddl)
+    static DirectorySecurity Security(string sddl, params int[] expectedMasks)
     {
-        var result = new System.Security.AccessControl.DirectorySecurity();
+        var result = new DirectorySecurity();
         result.SetSecurityDescriptorSddlForm(sddl);
+        // Inspect the actual parsed descriptor before asking the policy about it.
+        var descriptor = new RawSecurityDescriptor(result.GetSecurityDescriptorBinaryForm(), 0);
+        if (descriptor.DiscretionaryAcl is null)
+            Require(expectedMasks.Length == 0, "Missing fixture DACL: " + sddl);
+        else
+        {
+            Require(descriptor.DiscretionaryAcl.Count == expectedMasks.Length, "Fixture ACE count mismatch: " + sddl);
+            for (int i = 0; i < expectedMasks.Length; i++)
+                Require(((KnownAce)descriptor.DiscretionaryAcl[i]).AccessMask == expectedMasks[i],
+                    "Fixture AccessMask mismatch at ACE " + i + ": " + sddl);
+        }
         return result;
     }
-    Require(StartupRegistration.IsProtectedSecurity(Security("O:BAG:BAD:P(A;;FA;;;BA)(A;;FA;;;SY)(A;;FRFX;;;BU)")),
+    // All fixture masks use explicit file-right bits, independently checked against FileSystemRights.
+    const int fullControl = (int)FileSystemRights.FullControl;
+    const int readExecute = (int)FileSystemRights.ReadAndExecute | (int)FileSystemRights.Synchronize;
+    Require(StartupRegistration.IsProtectedSecurity(Security(
+        "O:BAG:BAD:P(A;;0x1f01ff;;;BA)(A;;0x1f01ff;;;SY)(A;;0x1200a9;;;BU)", fullControl, fullControl, readExecute)),
         "Administrator-owned read-only installation was rejected.");
-    foreach (string unsafeAcl in new[] {
-        "O:BAG:BAD:P(A;;FA;;;WD)", // Everyone full control
-        "O:BAG:BAD:P(A;;WD;;;AU)", // Authenticated Users may write
-        "O:BAG:BAD:P(A;;DC;;;BU)", // parent can delete dependencies
-        "O:BAG:BAD:P(A;OICIIO;GW;;;BU)", // inherit-only dependency grant
-        "O:BAG:BAD:NO_ACCESS_CONTROL", // null DACL
-        "O:BUG:BAD:P(A;;FRFX;;;BU)" // user-controlled owner
+    foreach (var unsafeAcl in new (string Sddl, int Mask)[] {
+        ("O:BAG:BAD:P(A;;0x1f01ff;;;WD)", fullControl), // Everyone full control (WD here is a trustee)
+        ("O:BAG:BAD:P(A;;0x2;;;AU)", (int)FileSystemRights.WriteData), // Authenticated Users write data / add files
+        ("O:BAG:BAD:P(A;;0x2;;;BU)", (int)FileSystemRights.WriteData), // Users write data / add files
+        ("O:BAG:BAD:P(A;;0x40;;;BU)", (int)FileSystemRights.DeleteSubdirectoriesAndFiles), // delete children
+        ("O:BAG:BAD:P(A;OICIIO;0x40000000;;;BU)", 0x40000000), // unmapped GENERIC_WRITE, inherit-only
+        ("O:BUG:BAD:P(A;;0x1200a9;;;BU)", readExecute) // user-controlled owner
     })
-        Require(!StartupRegistration.IsProtectedSecurity(Security(unsafeAcl)), "Unsafe startup ACL accepted: " + unsafeAcl);
+        Require(!StartupRegistration.IsProtectedSecurity(Security(unsafeAcl.Sddl, unsafeAcl.Mask)),
+            "Unsafe startup ACL accepted: " + unsafeAcl.Sddl);
+    Require(!StartupRegistration.IsProtectedSecurity(Security("O:BAG:BAD:NO_ACCESS_CONTROL")),
+        "Null DACL accepted.");
+    // DC is ADS_RIGHT_DS_DELETE_CHILD (0x2), which is WriteData/AddFile for files, NOT FILE_DELETE_CHILD (0x40).
+    var dcSecurity = Security("O:BAG:BAD:P(A;;DC;;;BU)", (int)FileSystemRights.WriteData);
+    Require(!StartupRegistration.IsProtectedSecurity(dcSecurity), "WriteData inside installation accepted.");
+    Require(StartupRegistration.IsProtectedSecurity(dcSecurity, ancestor: true), "Ancestor AddFile confused with delete-child.");
+    // WD in the rights field means WRITE_DAC (0x40000), not WriteData.
+    var wdSecurity = Security("O:BAG:BAD:P(A;;WD;;;BU)", (int)FileSystemRights.ChangePermissions);
+    Require(!StartupRegistration.IsProtectedSecurity(wdSecurity, ancestor: true), "Ancestor WRITE_DAC accepted.");
     // Program Files commonly grants CREATOR OWNER full control only to descendants.
-    const string safeAncestor = "O:BAG:BAD:P(A;OICI;FA;;;BA)(A;OICI;FA;;;SY)(A;OICI;FRFX;;;BU)(A;OICIIO;FA;;;CO)";
-    Require(StartupRegistration.IsProtectedSecurity(Security(safeAncestor), ancestor: true),
+    const string safeAncestor = "O:BAG:BAD:P(A;OICI;0x1f01ff;;;BA)(A;OICI;0x1f01ff;;;SY)(A;OICI;0x1200a9;;;BU)(A;OICIIO;0x1f01ff;;;CO)";
+    var safeAncestorSecurity = Security(safeAncestor, fullControl, fullControl, readExecute, fullControl);
+    Require(StartupRegistration.IsProtectedSecurity(safeAncestorSecurity, ancestor: true),
         "Safe Program Files ancestor with inherit-only CREATOR OWNER grant was rejected.");
-    Require(!StartupRegistration.IsProtectedSecurity(Security(safeAncestor)),
+    Require(!StartupRegistration.IsProtectedSecurity(safeAncestorSecurity),
         "Inherit-only mutation grant inside the installation was accepted.");
-    foreach (string unsafeAncestor in new[] {
-        "O:BAG:BAD:P(A;;DC;;;BU)", // delete children
-        "O:BAG:BAD:P(A;;SD;;;BU)", // delete this ancestor
-        "O:BAG:BAD:P(A;;WD;;;BU)", // change DACL
-        "O:BAG:BAD:P(A;;WO;;;BU)", // take ownership
-        "O:BAG:BAD:P(A;;GA;;;BU)" // unmapped generic-all includes replacement rights
+    foreach (var unsafeAncestor in new (string Sddl, int Mask)[] {
+        ("O:BAG:BAD:P(A;;0x40;;;BU)", (int)FileSystemRights.DeleteSubdirectoriesAndFiles), // delete children
+        ("O:BAG:BAD:P(A;;0x10000;;;BU)", (int)FileSystemRights.Delete), // delete this ancestor
+        ("O:BAG:BAD:P(A;;0x40000;;;BU)", (int)FileSystemRights.ChangePermissions), // change DACL
+        ("O:BAG:BAD:P(A;;0x80000;;;BU)", (int)FileSystemRights.TakeOwnership), // take ownership
+        ("O:BAG:BAD:P(A;;0x10000000;;;BU)", 0x10000000) // unmapped GENERIC_ALL includes replacement rights
     })
-        Require(!StartupRegistration.IsProtectedSecurity(Security(unsafeAncestor), ancestor: true),
-            "Unsafe effective ancestor rights accepted: " + unsafeAncestor);
+        Require(!StartupRegistration.IsProtectedSecurity(Security(unsafeAncestor.Sddl, unsafeAncestor.Mask), ancestor: true),
+            "Unsafe effective ancestor rights accepted: " + unsafeAncestor.Sddl);
     Require(!StartupRegistration.HasProtectedInstallFiles(Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Guid.NewGuid().ToString(), "Limiter.exe")),
         "Missing installation passed actual protection checks.");
@@ -87,7 +114,13 @@ static void CheckStartupSecurity()
         using var command = Process.Start(start)!;
         command.WaitForExit();
         Require(command.ExitCode == 0, "Could not create junction regression fixture.");
-        try { Require(!StartupRegistration.IsProtectedEntry(new DirectoryInfo(junction)), "Junction accepted."); }
+        try
+        {
+            var junctionInfo = new DirectoryInfo(junction);
+            Require((junctionInfo.Attributes & FileAttributes.ReparsePoint) != 0,
+                "Junction fixture is not a reparse point.");
+            Require(!StartupRegistration.IsProtectedEntry(junctionInfo), "Junction accepted.");
+        }
         finally { Directory.Delete(junction); }
     }
     finally { Directory.Delete(root, true); }

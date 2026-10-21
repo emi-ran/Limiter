@@ -25,12 +25,36 @@ class StartupSecurityContracts(unittest.TestCase):
         self.assertIn('(ancestor ? replacement : mutation)', source)
         self.assertIn('FileSystemRights.TakeOwnership | (FileSystemRights)0x10000000', source)
         checks = (ROOT / 'Limiter.EngineChecks/Program.cs').read_text()
-        self.assertIn('(A;OICIIO;FA;;;CO)', checks)
-        self.assertIn('Security(safeAncestor), ancestor: true', checks)
-        self.assertIn('!StartupRegistration.IsProtectedSecurity(Security(safeAncestor))', checks)
-        self.assertIn('Security(unsafeAncestor), ancestor: true', checks)
-        for rights in ('DC', 'SD', 'WD', 'WO', 'GA'):
-            self.assertIn(f'"O:BAG:BAD:P(A;;{rights};;;BU)"', checks)
+        self.assertIn('(A;OICIIO;0x1f01ff;;;CO)', checks)
+        self.assertIn('safeAncestorSecurity, ancestor: true', checks)
+        self.assertIn('!StartupRegistration.IsProtectedSecurity(safeAncestorSecurity)', checks)
+        self.assertIn('Security(unsafeAncestor.Sddl, unsafeAncestor.Mask), ancestor: true', checks)
+
+    def test_fixture_masks_are_checked_before_policy(self):
+        checks = (ROOT / 'Limiter.EngineChecks/Program.cs').read_text()
+        self.assertIn('static DirectorySecurity Security(', checks)
+        self.assertIn('// All fixture masks', checks)
+        helper = checks[checks.index('static DirectorySecurity Security('):checks.index('// All fixture masks')]
+        self.assertIn('params int[] expectedMasks', helper)
+        self.assertIn('new RawSecurityDescriptor(result.GetSecurityDescriptorBinaryForm(), 0)', helper)
+        self.assertIn('descriptor.DiscretionaryAcl.Count == expectedMasks.Length', helper)
+        self.assertIn('((KnownAce)descriptor.DiscretionaryAcl[i]).AccessMask == expectedMasks[i]', helper)
+        self.assertLess(helper.index('.AccessMask =='), helper.index('return result;'))
+        self.assertIn('Security(safeAncestor, fullControl, fullControl, readExecute, fullControl)', checks)
+
+    def test_file_right_fixtures_do_not_confuse_sddl_tokens(self):
+        checks = (ROOT / 'Limiter.EngineChecks/Program.cs').read_text()
+        for sddl, right in (
+            ('0x2', 'WriteData'), ('0x40', 'DeleteSubdirectoriesAndFiles'),
+            ('0x10000', 'Delete'), ('0x40000', 'ChangePermissions'),
+            ('0x80000', 'TakeOwnership'),
+        ):
+            self.assertIn(f'("O:BAG:BAD:P(A;;{sddl};;;BU)", (int)FileSystemRights.{right})', checks)
+        self.assertIn('("O:BAG:BAD:P(A;;0x2;;;AU)", (int)FileSystemRights.WriteData)', checks)
+        self.assertNotIn('"O:BAG:BAD:P(A;;DC;;;BU)", // delete children', checks)
+        self.assertNotIn('(A;;WD;;;AU)', checks)
+        self.assertIn('Security("O:BAG:BAD:P(A;;DC;;;BU)", (int)FileSystemRights.WriteData)', checks)
+        self.assertIn('Security("O:BAG:BAD:P(A;;WD;;;BU)", (int)FileSystemRights.ChangePermissions)', checks)
 
     def test_junction_fixture_uses_cmd_quoting_and_spaces(self):
         source = (ROOT / 'Limiter.EngineChecks/Program.cs').read_text()
@@ -39,6 +63,8 @@ class StartupSecurityContracts(unittest.TestCase):
         self.assertIn('Arguments = $"/d /c \\"mklink /J \\"{junction}\\" \\"{target}\\"\\""', fixture)
         self.assertIn('"target with spaces"', fixture)
         self.assertIn('"junction with spaces"', fixture)
+        self.assertIn('(junctionInfo.Attributes & FileAttributes.ReparsePoint) != 0', fixture)
+        self.assertLess(fixture.index('junctionInfo.Attributes'), fixture.index('IsProtectedEntry(junctionInfo)'))
 
     def test_independent_pid_removal_refreshes_activity(self):
         source = (ROOT / 'Limiter.EngineChecks/Program.cs').read_text()
