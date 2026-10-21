@@ -36,10 +36,39 @@ class StartupSecurityContracts(unittest.TestCase):
         self.assertIn('// All fixture masks', checks)
         helper = checks[checks.index('static DirectorySecurity Security('):checks.index('// All fixture masks')]
         self.assertIn('params int[] expectedMasks', helper)
-        self.assertIn('new RawSecurityDescriptor(result.GetSecurityDescriptorBinaryForm(), 0)', helper)
+        self.assertIn('var descriptor = new RawSecurityDescriptor(sddl);', helper)
         self.assertIn('descriptor.DiscretionaryAcl.Count == expectedMasks.Length', helper)
-        self.assertIn('((KnownAce)descriptor.DiscretionaryAcl[i]).AccessMask == expectedMasks[i]', helper)
-        self.assertLess(helper.index('.AccessMask =='), helper.index('return result;'))
+        self.assertIn('ace.AccessMask == expectedMasks[i]', helper)
+        self.assertLess(helper.index('ace.AccessMask =='), helper.index('result.SetSecurityDescriptorSddlForm(sddl)'))
+        self.assertIn('expected identity={ace.SecurityIdentifier}', helper)
+        self.assertIn('actual identity={ace.SecurityIdentifier}', helper)
+        self.assertIn('expectedMasks[i]:x8', helper)
+        self.assertIn('ace.AccessMask:x8', helper)
+        self.assertIn('new RawSecurityDescriptor(result.GetSecurityDescriptorBinaryForm(), 0)', helper)
+        self.assertLess(helper.index('expectedAces.SequenceEqual(actualAces)'), helper.index('return result;'))
+
+    def test_normalized_fixture_preserves_identity_mask_flags_multiset(self):
+        checks = (ROOT / 'Limiter.EngineChecks/Program.cs').read_text()
+        helper = checks[checks.index('static DirectorySecurity Security('):checks.index('// All fixture masks')]
+        self.assertIn('static string AceIdentity(GenericAce ace)', helper)
+        self.assertIn('known.SecurityIdentifier', helper)
+        self.assertIn('known.AccessMask:x8', helper)
+        self.assertIn('ace.AceFlags', helper)
+        self.assertIn('ace.AceType', helper)
+        self.assertIn('static string[] AceMultiset(RawAcl? acl)', helper)
+        self.assertIn('.Select(AceIdentity).OrderBy(identity => identity, StringComparer.Ordinal).ToArray()', helper)
+        self.assertNotIn('.Distinct(', helper)  # Duplicate ACE counts must not be discarded.
+        self.assertIn('var expectedAces = AceMultiset(descriptor.DiscretionaryAcl);', helper)
+        self.assertIn('var actualAces = AceMultiset(normalized.DiscretionaryAcl);', helper)
+        self.assertIn('expectedAces.SequenceEqual(actualAces)', helper)
+        self.assertIn('expected identity/mask/flags=', helper)
+        self.assertIn('actual identity/mask/flags=', helper)
+        self.assertIn('(descriptor.DiscretionaryAcl is null) == (normalized.DiscretionaryAcl is null)', helper)
+        self.assertIn('Security(safeAncestor, fullControl, fullControl, readExecute, fullControl)', checks)
+
+    def test_fixture_order_contract_keeps_safe_ancestor_trustees_paired(self):
+        checks = (ROOT / 'Limiter.EngineChecks/Program.cs').read_text()
+        self.assertIn('(A;OICI;0x1200a9;;;BU)(A;OICIIO;0x1f01ff;;;CO)', checks)
         self.assertIn('Security(safeAncestor, fullControl, fullControl, readExecute, fullControl)', checks)
 
     def test_file_right_fixtures_do_not_confuse_sddl_tokens(self):

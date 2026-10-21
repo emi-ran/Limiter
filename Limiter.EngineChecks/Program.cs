@@ -39,19 +39,40 @@ static void CheckStartupSecurity()
 {
     static DirectorySecurity Security(string sddl, params int[] expectedMasks)
     {
-        var result = new DirectorySecurity();
-        result.SetSecurityDescriptorSddlForm(sddl);
-        // Inspect the actual parsed descriptor before asking the policy about it.
-        var descriptor = new RawSecurityDescriptor(result.GetSecurityDescriptorBinaryForm(), 0);
+        // Raw SDDL preserves input order; DirectorySecurity may canonicalize ACE order.
+        var descriptor = new RawSecurityDescriptor(sddl);
         if (descriptor.DiscretionaryAcl is null)
             Require(expectedMasks.Length == 0, "Missing fixture DACL: " + sddl);
         else
         {
             Require(descriptor.DiscretionaryAcl.Count == expectedMasks.Length, "Fixture ACE count mismatch: " + sddl);
             for (int i = 0; i < expectedMasks.Length; i++)
-                Require(((KnownAce)descriptor.DiscretionaryAcl[i]).AccessMask == expectedMasks[i],
-                    "Fixture AccessMask mismatch at ACE " + i + ": " + sddl);
+            {
+                var ace = (KnownAce)descriptor.DiscretionaryAcl[i];
+                Require(ace.AccessMask == expectedMasks[i],
+                    $"Fixture AccessMask mismatch at input ACE {i}: expected identity={ace.SecurityIdentifier} mask=0x{expectedMasks[i]:x8}; " +
+                    $"actual identity={ace.SecurityIdentifier} mask=0x{ace.AccessMask:x8}: {sddl}");
+            }
         }
+
+        static string AceIdentity(GenericAce ace)
+        {
+            var known = (KnownAce)ace;
+            return $"{known.SecurityIdentifier} mask=0x{known.AccessMask:x8} flags={ace.AceFlags} type={ace.AceType}";
+        }
+        static string[] AceMultiset(RawAcl? acl) => acl is null ? Array.Empty<string>() :
+            acl.Cast<GenericAce>().Select(AceIdentity).OrderBy(identity => identity, StringComparer.Ordinal).ToArray();
+
+        var expectedAces = AceMultiset(descriptor.DiscretionaryAcl);
+        var result = new DirectorySecurity();
+        result.SetSecurityDescriptorSddlForm(sddl);
+        var normalized = new RawSecurityDescriptor(result.GetSecurityDescriptorBinaryForm(), 0);
+        var actualAces = AceMultiset(normalized.DiscretionaryAcl);
+        // Compare whole ACE identities, not positional masks or a set that loses duplicates.
+        Require((descriptor.DiscretionaryAcl is null) == (normalized.DiscretionaryAcl is null) &&
+            expectedAces.SequenceEqual(actualAces),
+            $"Fixture normalization changed ACEs: expected identity/mask/flags=[{string.Join("; ", expectedAces)}]; " +
+            $"actual identity/mask/flags=[{string.Join("; ", actualAces)}]: {sddl}");
         return result;
     }
     // All fixture masks use explicit file-right bits, independently checked against FileSystemRights.
