@@ -17,3 +17,5 @@ artifacts/
 .vs/
 *.user
 *.suo
+__pycache__/
+*.pyc
