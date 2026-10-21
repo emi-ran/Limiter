@@ -46,6 +46,17 @@ class DistributionContracts(unittest.TestCase):
         install = script.index("Invoke-PackageProcess 'msiexec.exe' @('/i'", install_loop)
         self.assertLess(guard, install)
 
+    def test_cleanup_preserves_the_primary_install_failure(self):
+        script = (ROOT / 'installer/Test-Packages.ps1').read_text(encoding='utf-8')
+        lifecycle = script[script.index("foreach ($kind in @('MSI', 'Setup'))"):]
+        self.assertIn('$lifecycleError = $null', lifecycle)
+        self.assertIn('$lifecycleError = $_', lifecycle)
+        self.assertIn('if ($null -eq $lifecycleError) { throw }', lifecycle)
+        self.assertIn('Write-Warning "$kind cleanup also failed: $_"', lifecycle)
+        # Neither a failed install nor an unexpected uninstall may silently pass.
+        self.assertIn('if ($process.ExitCode -notin @(0, 3010))', script)
+        self.assertNotIn('@(0, 3010, 1605)', script)
+
     def test_installer_folder_is_fixed_and_options_default_off(self):
         package = ET.parse(ROOT / 'installer/Package.wxs')
         options = ET.parse(ROOT / 'installer/Options.wxs')

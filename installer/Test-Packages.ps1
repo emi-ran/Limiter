@@ -17,6 +17,19 @@ function Invoke-PackageProcess([string]$Path, [string[]]$Arguments) {
     if (!$process.WaitForExit(120000)) { $process.Kill(); throw "Timed out: $Path" }
     if ($process.ExitCode -notin @(0, 3010)) { throw "$Path exited with $($process.ExitCode)." }
 }
+function Export-InstallerHelperEvents([string]$Kind, [datetime]$Since) {
+    try {
+        # Read raw XML: this failure-only source deliberately has no message DLL
+        # or registry registration. Filter records, not installed provider metadata.
+        $events = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $Since } -ErrorAction Stop |
+            Where-Object { $_.ProviderName -eq 'Limiter Installer' })
+        if ($events.Count -eq 0) { Write-Warning 'No installer helper event was captured.'; return }
+        $events | ForEach-Object { $_.ToXml() } |
+            Set-Content -LiteralPath (Join-Path $directory "$Kind-helper-events.log") -Encoding utf8
+        Write-Output "Captured $($events.Count) installer helper failure event(s)."
+    }
+    catch { Write-Warning "Could not collect installer helper events: $_" }
+}
 $portable = @(Get-ChildItem "$directory/*portable*.exe" -File)
 $msi = @(Get-ChildItem "$directory/*.msi" -File)
 $setup = @(Get-ChildItem "$directory/*setup*.exe" -File)
@@ -68,6 +81,8 @@ if ($Install) {
         if (Test-Path $installedDirectory) { throw 'Refusing to replace an existing Limiter installation.' }
         if (Test-Path $desktopLink) { throw 'Refusing to replace an existing desktop shortcut.' }
         if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) { throw 'Refusing to replace an existing startup task.' }
+        $lifecycleError = $null
+        $lifecycleStarted = Get-Date
         try {
             if ($kind -eq 'MSI') {
                 Invoke-PackageProcess 'msiexec.exe' @('/i', ('"' + $msi[0].FullName + '"'), '/qn', '/norestart', 'DESKTOPSHORTCUT=1', 'STARTWITHWINDOWS=1', '/l*v', ('"' + "$directory/msi-install.log" + '"'))
@@ -85,13 +100,25 @@ if ($Install) {
             elseif ((Test-Path $desktopLink) -or $task) { throw 'Silent setup enabled an opt-in desktop shortcut or startup task.' }
             Invoke-PackageProcess $installedExe @('--verify-package')
         }
+        catch {
+            $lifecycleError = $_
+            Export-InstallerHelperEvents $kind $lifecycleStarted
+            throw
+        }
         finally {
-            # Always attempt cleanup, including an installation that failed partway through.
-            if ($kind -eq 'MSI') {
-                Invoke-PackageProcess 'msiexec.exe' @('/x', ('"' + $msi[0].FullName + '"'), '/qn', '/norestart', '/l*v', ('"' + "$directory/msi-uninstall.log" + '"'))
+            # Attempt cleanup even after failure, without masking the original install/verification error.
+            try {
+                if ($kind -eq 'MSI') {
+                    Invoke-PackageProcess 'msiexec.exe' @('/x', ('"' + $msi[0].FullName + '"'), '/qn', '/norestart', '/l*v', ('"' + "$directory/msi-uninstall.log" + '"'))
+                }
+                else {
+                    Invoke-PackageProcess $setup[0].FullName @('/uninstall', '/quiet', '/norestart', '/log', ('"' + "$directory/setup-uninstall.log" + '"'))
+                }
             }
-            else {
-                Invoke-PackageProcess $setup[0].FullName @('/uninstall', '/quiet', '/norestart', '/log', ('"' + "$directory/setup-uninstall.log" + '"'))
+            catch {
+                Export-InstallerHelperEvents $kind $lifecycleStarted
+                if ($null -eq $lifecycleError) { throw }
+                Write-Warning "$kind cleanup also failed: $_"
             }
         }
         if ((Test-Path $installedDirectory) -or (Test-Path $desktopLink) -or (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue)) { throw "$kind uninstall left installed files, desktop shortcut or startup task." }

@@ -76,6 +76,60 @@ internal static class StartupRegistration
         catch { return false; }
     }
 
+    // Read-only failure context; never used to authorize registration. Preserve the
+    // exact fail-closed policy above and identify the first rejected entry/ACL.
+    internal static string DescribeInstallProtectionFailure()
+    {
+        try
+        {
+            string? path = Environment.ProcessPath;
+            string context = $"Process={path}; Identity={WindowsIdentity.GetCurrent().User?.Value}";
+            if (!IsProtectedInstallPath(path)) return context + "; outside Program Files";
+            var executable = new FileInfo(Path.GetFullPath(path!));
+            if (!executable.Exists) return context + "; executable missing";
+
+            static string? Rejection(FileSystemInfo entry, bool ancestor = false)
+            {
+                if (IsProtectedEntry(entry, ancestor)) return null;
+                try
+                {
+                    var attributes = entry.Attributes;
+                    if ((attributes & FileAttributes.ReparsePoint) != 0)
+                        return $"Rejected reparse point: {entry.FullName}";
+                    FileSystemSecurity security = entry is DirectoryInfo directory
+                        ? directory.GetAccessControl(AccessControlSections.Owner | AccessControlSections.Access)
+                        : ((FileInfo)entry).GetAccessControl(AccessControlSections.Owner | AccessControlSections.Access);
+                    return $"Rejected entry={entry.FullName}; ancestor={ancestor}; attributes={attributes}; " +
+                        security.GetSecurityDescriptorSddlForm(AccessControlSections.Owner | AccessControlSections.Access);
+                }
+                catch (Exception ex) { return $"Cannot inspect {entry.FullName}: {ex}"; }
+            }
+
+            static string? TreeRejection(DirectoryInfo directory)
+            {
+                foreach (var entry in directory.EnumerateFileSystemInfos())
+                {
+                    string? reason = Rejection(entry);
+                    if (reason is not null) return reason;
+                    // Rejection checks reparse points before any recursion.
+                    if (entry is DirectoryInfo child)
+                    {
+                        reason = TreeRejection(child);
+                        if (reason is not null) return reason;
+                    }
+                }
+                return null;
+            }
+
+            string? failure = Rejection(executable) ?? Rejection(executable.Directory!);
+            for (DirectoryInfo? parent = executable.Directory!.Parent; failure is null && parent is not null; parent = parent.Parent)
+                failure = Rejection(parent, ancestor: true);
+            failure ??= TreeRejection(executable.Directory!);
+            return context + "\n" + (failure ?? "Install protection currently passes.");
+        }
+        catch (Exception ex) { return $"Protection diagnostic failed: {ex}"; }
+    }
+
     private static bool IsProtectedTree(DirectoryInfo directory)
     {
         foreach (var entry in directory.EnumerateFileSystemInfos())

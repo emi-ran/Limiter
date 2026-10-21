@@ -37,7 +37,7 @@ public partial class App : Application
                 StartupRegistration.AdoptForUser(e.Args[1]);
                 Shutdown(0);
             }
-            catch (Exception ex) { Console.Error.WriteLine(ex.Message); Shutdown(1); }
+            catch (Exception ex) { InstallerDiagnostics.ReportFailure("adopt-startup", ex); Shutdown(1); }
             return;
         }
         if (e.Args.Length > 0 && e.Args[0] == "--installer-startup")
@@ -48,13 +48,13 @@ public partial class App : Application
                 StartupRegistration.EnableForUser(e.Args[1]);
                 Shutdown(0);
             }
-            catch (Exception ex) { Console.Error.WriteLine(ex.Message); Shutdown(1); }
+            catch (Exception ex) { InstallerDiagnostics.ReportFailure("enable-startup", ex); Shutdown(1); }
             return;
         }
         if (e.Args.SequenceEqual(new[] { "--installer-remove-startup" }))
         {
             try { StartupRegistration.RemoveForInstalledExecutable(); Shutdown(0); }
-            catch (Exception ex) { Console.Error.WriteLine(ex.Message); Shutdown(1); }
+            catch (Exception ex) { InstallerDiagnostics.ReportFailure("remove-startup", ex); Shutdown(1); }
             return;
         }
         try { Localization.Current.SetLanguage(new SettingsStore().Load().Language); }
