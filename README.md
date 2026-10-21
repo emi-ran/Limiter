@@ -29,6 +29,13 @@ Both installers offer an installation folder, an optional desktop shortcut and *
 
 `SHA256SUMS.txt` contains package hashes. Portable builds still store settings and rules under `%LOCALAPPDATA%\Limiter`. `0` means unlimited; the minimum positive limit is `16 KB/s`.
 
+## System tray
+
+Manual launches show the window; Windows logon launches use `--tray` without showing it.
+Closing the window hides it while monitoring continues. Double-click the tray icon or
+choose **Open** to restore; choose **Exit** to stop Limiter. Existing enabled startup tasks
+are refreshed on first launch; registration failures appear in Settings.
+
 ## Traffic and rules
 
 - **Activity:** Live download / upload rates, session totals, application search and selected application details. Click a column header to toggle ascending / descending sorting; the active column and direction are highlighted. Download rate is sorted highest first by default. The Rules column sorts by the saved download limit.
@@ -51,11 +58,11 @@ The **Settings** tab currently offers:
 | Option | Behavior |
 | --- | --- |
 | Language | **System language** is the default. Turkish and English are supported; other system languages fall back to English. You can explicitly select Türkçe or English. **Apply** saves the preference and changes the interface immediately. |
-| Start with Windows | Off by default. The switch takes effect immediately and opens Limiter with administrator privileges when the current user signs in. |
+| Start with Windows | Off by default. The switch takes effect immediately and starts Limiter in the system tray with administrator privileges when the current user signs in. |
 
 The language preference is stored in `%LOCALAPPDATA%\Limiter\settings.json`. Startup uses a per-user Task Scheduler entry named `Limiter.Startup.<SID>`; no password is stored. Turning it off deletes only that entry. If you move the application, turn the option off and on again to update its path.
 
-Startup opens the application window; it is not a separate Windows service. Accounts without the required administrator privileges cannot create the startup entry. If saving or startup registration fails, the selection is rolled back and an error is shown.
+Startup does not show the application window; it is not a separate Windows service. Accounts without the required administrator privileges cannot create the startup entry. If saving or startup registration fails, the selection is rolled back and an error is shown.
 
 ## Build from source
 

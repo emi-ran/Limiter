@@ -51,7 +51,12 @@ public partial class App : Application
             return;
         }
         base.OnStartup(e);
-        new MainWindow().Show();
+        bool startInTray = e.Args.Contains("--tray", StringComparer.OrdinalIgnoreCase);
+        var window = new MainWindow();
+        MainWindow = window;
+        // Keep capture active even when the window has never been shown.
+        bool monitoringStarted = window.StartMonitoring();
+        if (!startInTray || !monitoringStarted) window.Show();
     }
 
     protected override void OnExit(ExitEventArgs e)

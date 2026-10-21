@@ -1,4 +1,6 @@
 {
+  "tray-open": { "tr": "Aç", "en": "Open" },
+  "tray-exit": { "tr": "Çıkış", "en": "Exit" },
   "no-rules": {
     "tr": "Kural yok",
     "en": "No rules"

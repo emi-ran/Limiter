@@ -30,6 +30,52 @@ internal static class StartupRegistration
         }
         finally { Marshal.FinalReleaseComObject(service); }
     }
+    // Preserve another installation's task and all existing task settings.
+    internal static void MigrateCurrentExecutable()
+    {
+        dynamic service = Connect();
+        try
+        {
+            dynamic folder = service.GetFolder("\\");
+            try
+            {
+                dynamic task;
+                try { task = folder.GetTask(TaskName); }
+                catch (Exception ex) when (ex.HResult == unchecked((int)0x80070002)) { return; }
+                try
+                {
+                    if (!(bool)task.Enabled) return;
+                    dynamic definition = task.Definition;
+                    try
+                    {
+                        dynamic actions = definition.Actions;
+                        try
+                        {
+                            if (actions.Count != 1) return;
+                            dynamic action = actions[1];
+                            try
+                            {
+                                if ((int)action.Type != 0 ||
+                                    !string.Equals((string)action.Path, Environment.ProcessPath, StringComparison.OrdinalIgnoreCase) ||
+                                    !string.IsNullOrWhiteSpace((string)action.Arguments)) return;
+                                action.Arguments = "--tray";
+                            }
+                            finally { Marshal.FinalReleaseComObject(action); }
+                        }
+                        finally { Marshal.FinalReleaseComObject(actions); }
+                        dynamic updated = folder.RegisterTaskDefinition(TaskName, definition, 6,
+                            WindowsIdentity.GetCurrent().User!.Value, null, 3);
+                        Marshal.FinalReleaseComObject(updated);
+                    }
+                    finally { Marshal.FinalReleaseComObject(definition); }
+                }
+                finally { Marshal.FinalReleaseComObject(task); }
+            }
+            finally { Marshal.FinalReleaseComObject(folder); }
+        }
+        finally { Marshal.FinalReleaseComObject(service); }
+    }
+
     private static dynamic CreateDefinition(dynamic service, string path, string user)
     {
         dynamic definition = service.NewTask(0);
@@ -50,6 +96,7 @@ internal static class StartupRegistration
             Marshal.FinalReleaseComObject(trigger);
             dynamic action = definition.Actions.Create(0);
             action.Path = path;
+            action.Arguments = "--tray";
             action.WorkingDirectory = Path.GetDirectoryName(path);
             Marshal.FinalReleaseComObject(action);
             return definition;

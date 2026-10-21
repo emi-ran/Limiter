@@ -43,18 +43,31 @@ public partial class MainWindow : Window
             (row.AppName.Contains(_search, StringComparison.CurrentCultureIgnoreCase) ||
              row.Path.Contains(_search, StringComparison.CurrentCultureIgnoreCase));
         AppsGrid.Columns[1].SortDirection = ListSortDirection.Descending;
-        Loaded += (_, _) =>
+        InitializeTray();
+        // Refresh existing registrations too: older versions had no --tray argument.
+        try
         {
-            try
-            {
-                _engine.Start();
-                StatusText.Text = _engine.Status;
-                _timer.Tick += (_, _) => RefreshRows();
-                _timer.Start();
-            }
-            catch (Exception ex) { StatusText.Text = Localization.T("could-not-start-monitoring") + ex.Message; }
-        };
-        Closed += (_, _) => { _timer.Stop(); _engine.Dispose(); };
+            StartupRegistration.MigrateCurrentExecutable();
+        }
+        catch (Exception ex) { SettingsMessage.Text = Localization.T("could-not-change-startup-setting") + ex.Message; }
+        Closed += (_, _) => { DisposeTray(); _timer.Stop(); _engine.Dispose(); };
+    }
+
+    internal bool StartMonitoring()
+    {
+        try
+        {
+            _engine.Start();
+            StatusText.Text = _engine.Status;
+            _timer.Tick += (_, _) => RefreshRows();
+            _timer.Start();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = Localization.T("could-not-start-monitoring") + ex.Message;
+            return false;
+        }
     }
 
     private void RefreshRows()
