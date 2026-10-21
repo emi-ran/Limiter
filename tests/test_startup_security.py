@@ -27,8 +27,28 @@ class StartupSecurityContracts(unittest.TestCase):
         checks = (ROOT / 'Limiter.EngineChecks/Program.cs').read_text()
         self.assertIn('(A;OICIIO;0x1f01ff;;;CO)', checks)
         self.assertIn('safeAncestorSecurity, ancestor: true', checks)
-        self.assertIn('!StartupRegistration.IsProtectedSecurity(safeAncestorSecurity)', checks)
+        self.assertIn('Require(StartupRegistration.IsProtectedSecurity(safeAncestorSecurity),', checks)
         self.assertIn('Security(unsafeAncestor.Sddl, unsafeAncestor.Mask), ancestor: true', checks)
+
+    def test_creator_owner_exception_is_narrow_and_after_owner_validation(self):
+        source = (ROOT / 'Limiter/StartupRegistration.cs').read_text()
+        policy = source[source.index('internal static bool IsProtectedSecurity('):source.index('// Preserve another installation')]
+        self.assertIn('descriptor.Owner is null || !IsTrustedInstallerIdentity(descriptor.Owner)', policy)
+        self.assertIn('((SecurityIdentifier)rule.IdentityReference).Value == "S-1-3-0" &&', policy)
+        self.assertIn('(rule.PropagationFlags & PropagationFlags.InheritOnly) != 0', policy)
+        self.assertLess(policy.index('!IsTrustedInstallerIdentity(descriptor.Owner)'), policy.index('"S-1-3-0"'))
+        self.assertIn('if (!IsProtectedEntry(entry)) return false;', source)
+        self.assertIn('if (entry is DirectoryInfo child && !IsProtectedTree(child)) return false;', source)
+        checks = (ROOT / 'Limiter.EngineChecks/Program.cs').read_text()
+        self.assertIn('const string installedDirectorySddl = "O:SYD:AI', checks)
+        self.assertIn('(A;OICIIOID;GA;;;CO)', checks)
+        self.assertIn('Security(installedDirectorySddl, installedDirectoryMasks)', checks)
+        self.assertIn('installedDirectorySddl.Replace("O:SY", "O:BU")', checks)
+        self.assertIn('installedDirectorySddl.Replace("OICIIOID;GA;;;CO", "OICIID;GA;;;CO")', checks)
+        self.assertIn('installedDirectorySddl.Replace("GA;;;CO", "GA;;;BU")', checks)
+        self.assertIn('("O:BAG:BAD:P(A;;0x1f01ff;;;CO)", fullControl)', checks)
+        self.assertIn('("O:BAG:BAD:P(A;OICIIOID;0x1f01ff;;;BU)", fullControl)', checks)
+        self.assertIn('safeAncestor.Replace(";;;CO", ";;;BU")', checks)
 
     def test_fixture_masks_are_checked_before_policy(self):
         checks = (ROOT / 'Limiter.EngineChecks/Program.cs').read_text()

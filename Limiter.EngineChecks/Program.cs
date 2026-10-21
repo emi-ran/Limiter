@@ -87,6 +87,8 @@ static void CheckStartupSecurity()
         ("O:BAG:BAD:P(A;;0x2;;;BU)", (int)FileSystemRights.WriteData), // Users write data / add files
         ("O:BAG:BAD:P(A;;0x40;;;BU)", (int)FileSystemRights.DeleteSubdirectoriesAndFiles), // delete children
         ("O:BAG:BAD:P(A;OICIIO;0x40000000;;;BU)", 0x40000000), // unmapped GENERIC_WRITE, inherit-only
+        ("O:BAG:BAD:P(A;OICIIOID;0x1f01ff;;;BU)", fullControl), // inherited Users grant remains unsafe
+        ("O:BAG:BAD:P(A;;0x1f01ff;;;CO)", fullControl), // effective CREATOR OWNER is not exempt
         ("O:BUG:BAD:P(A;;0x1200a9;;;BU)", readExecute) // user-controlled owner
     })
         Require(!StartupRegistration.IsProtectedSecurity(Security(unsafeAcl.Sddl, unsafeAcl.Mask)),
@@ -105,8 +107,29 @@ static void CheckStartupSecurity()
     var safeAncestorSecurity = Security(safeAncestor, fullControl, fullControl, readExecute, fullControl);
     Require(StartupRegistration.IsProtectedSecurity(safeAncestorSecurity, ancestor: true),
         "Safe Program Files ancestor with inherit-only CREATOR OWNER grant was rejected.");
-    Require(!StartupRegistration.IsProtectedSecurity(safeAncestorSecurity),
-        "Inherit-only mutation grant inside the installation was accepted.");
+    Require(StartupRegistration.IsProtectedSecurity(safeAncestorSecurity),
+        "Trusted installation with inherit-only CREATOR OWNER grant was rejected.");
+    Require(!StartupRegistration.IsProtectedSecurity(Security(
+        safeAncestor.Replace(";;;CO", ";;;BU"), fullControl, fullControl, readExecute, fullControl)),
+        "Inherit-only Users mutation grant inside the installation was accepted.");
+
+    // Exact rejected install-directory SDDL from MSI-helper-events.log, run 39695048904.
+    // Keep generic masks unexpanded to cover the inherited Program Files ACL as observed.
+    const string installedDirectorySddl = "O:SYD:AI(A;ID;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;CIIOID;GA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;ID;FA;;;SY)(A;OICIIOID;GA;;;SY)(A;ID;FA;;;BA)(A;OICIIOID;GA;;;BA)(A;ID;0x1200a9;;;BU)(A;OICIIOID;GXGR;;;BU)(A;OICIIOID;GA;;;CO)(A;ID;0x1200a9;;;AC)(A;OICIIOID;GXGR;;;AC)(A;ID;0x1200a9;;;S-1-15-2-2)(A;OICIIOID;GXGR;;;S-1-15-2-2)";
+    int[] installedDirectoryMasks = [fullControl, 0x10000000, fullControl, 0x10000000,
+        fullControl, 0x10000000, readExecute, unchecked((int)0xa0000000), 0x10000000,
+        readExecute, unchecked((int)0xa0000000), readExecute, unchecked((int)0xa0000000)];
+    Require(StartupRegistration.IsProtectedSecurity(Security(installedDirectorySddl, installedDirectoryMasks)),
+        "SYSTEM-owned MSI installation with inherited CREATOR OWNER was rejected.");
+    Require(!StartupRegistration.IsProtectedSecurity(Security(
+        installedDirectorySddl.Replace("O:SY", "O:BU"), installedDirectoryMasks)),
+        "Inherit-only CREATOR OWNER bypassed untrusted object-owner rejection.");
+    Require(!StartupRegistration.IsProtectedSecurity(Security(
+        installedDirectorySddl.Replace("OICIIOID;GA;;;CO", "OICIID;GA;;;CO"), installedDirectoryMasks)),
+        "Effective inherited CREATOR OWNER mutation grant was accepted.");
+    Require(!StartupRegistration.IsProtectedSecurity(Security(
+        installedDirectorySddl.Replace("GA;;;CO", "GA;;;BU"), installedDirectoryMasks)),
+        "Inherited inherit-only Users mutation grant was accepted.");
     foreach (var unsafeAncestor in new (string Sddl, int Mask)[] {
         ("O:BAG:BAD:P(A;;0x40;;;BU)", (int)FileSystemRights.DeleteSubdirectoriesAndFiles), // delete children
         ("O:BAG:BAD:P(A;;0x10000;;;BU)", (int)FileSystemRights.Delete), // delete this ancestor

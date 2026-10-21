@@ -165,6 +165,9 @@ internal static class StartupRegistration
         // Conservative allow-list: do not try to infer token membership or allow a
         // deny ACE to cancel an unsafe grant. Above the install, only effective
         // replacement rights matter; within it, inherit-only grants matter to DLLs.
+        // Only inherit-only CREATOR OWNER is a placeholder for the child's creator,
+        // not an effective grant. The owner above must be trusted, and IsProtectedTree
+        // still checks every descendant's actual owner and ACL after substitution.
         const FileSystemRights replacement = FileSystemRights.Delete | FileSystemRights.DeleteSubdirectoriesAndFiles |
             FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership | (FileSystemRights)0x10000000;
         // Include unmapped GENERIC_WRITE / GENERIC_ALL masks in supplied ACLs.
@@ -173,6 +176,8 @@ internal static class StartupRegistration
             if (rule.AccessControlType == AccessControlType.Allow &&
                 (!ancestor || (rule.PropagationFlags & PropagationFlags.InheritOnly) == 0) &&
                 !IsTrustedInstallerIdentity((SecurityIdentifier)rule.IdentityReference) &&
+                !(((SecurityIdentifier)rule.IdentityReference).Value == "S-1-3-0" &&
+                    (rule.PropagationFlags & PropagationFlags.InheritOnly) != 0) &&
                 (rule.FileSystemRights & (ancestor ? replacement : mutation)) != 0)
                 return false;
         return true;
