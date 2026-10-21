@@ -5,6 +5,8 @@ namespace Limiter;
 internal static class Native
 {
     internal const int AddressSize = 80;
+    // Values from the bundled WinDivert 2.2.2 windivert.h.
+    internal const int ShutdownReceive = 0x1;
     internal static readonly nint InvalidHandle = new(-1);
 
     [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi, SetLastError = true)]

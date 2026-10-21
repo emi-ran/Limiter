@@ -44,6 +44,9 @@ public sealed class RuleStore
     private readonly string _file;
     private readonly Dictionary<string, AppRule> _rules = new(StringComparer.OrdinalIgnoreCase);
 
+    // A failed load must never turn into an empty file on the next save.
+    internal string? LoadError { get; private set; }
+
     public RuleStore() : this(System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Limiter", "rules.json")) { }
 
@@ -52,11 +55,24 @@ public sealed class RuleStore
         _file = file;
         try
         {
-            if (File.Exists(_file))
-                foreach (var rule in JsonSerializer.Deserialize<List<AppRule>>(File.ReadAllText(_file)) ?? [])
-                    if (!string.IsNullOrWhiteSpace(rule.Path)) _rules[rule.Path] = rule;
+            if (!File.Exists(_file)) return;
+            var loaded = JsonSerializer.Deserialize<List<AppRule>>(File.ReadAllText(_file))
+                ?? throw new InvalidDataException("The rule file is empty or null.");
+            var valid = new Dictionary<string, AppRule>(StringComparer.OrdinalIgnoreCase);
+            foreach (var rule in loaded)
+            {
+                if (rule is null || string.IsNullOrWhiteSpace(rule.Path))
+                    throw new InvalidDataException("A rule entry has no application path.");
+                valid[rule.Path] = rule;
+            }
+            foreach (var pair in valid) _rules[pair.Key] = pair.Value;
         }
-        catch { /* Invalid rule file leaves the app usable. */ }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or NotSupportedException)
+        {
+            // Keep the file untouched so the user can repair or remove it.
+            _rules.Clear();
+            LoadError = _file + ": " + ex.Message;
+        }
     }
 
     public AppRule Get(string path) => _rules.TryGetValue(path, out var rule) ? rule : new AppRule { Path = path };
@@ -71,6 +87,8 @@ public sealed class RuleStore
 
     public void Set(AppRule rule)
     {
+        if (LoadError is not null)
+            throw new InvalidOperationException(Localization.T("rules-could-not-be-saved-until-the-file-is-fixed"));
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_file)!);
         var updated = new Dictionary<string, AppRule>(_rules, StringComparer.OrdinalIgnoreCase) { [rule.Path] = rule };
         string temporary = _file + ".tmp";

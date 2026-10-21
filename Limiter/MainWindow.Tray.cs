@@ -10,6 +10,7 @@ public partial class MainWindow
     private System.Windows.Forms.ToolStripMenuItem? _openTrayItem;
     private System.Windows.Forms.ToolStripMenuItem? _exitTrayItem;
     private bool _exiting;
+    private int _reportedMonitoringError;
 
     private void InitializeTray()
     {
@@ -21,7 +22,7 @@ public partial class MainWindow
         _openTrayItem = new System.Windows.Forms.ToolStripMenuItem();
         _exitTrayItem = new System.Windows.Forms.ToolStripMenuItem();
         _openTrayItem.Click += (_, _) => Dispatcher.Invoke(ShowFromTray);
-        _exitTrayItem.Click += (_, _) => Dispatcher.Invoke(() =>
+        _exitTrayItem.Click += (_, _) => Dispatcher.InvokeAsync(() =>
         {
             _exiting = true;
             System.Windows.Application.Current.Shutdown();
@@ -46,9 +47,24 @@ public partial class MainWindow
     {
         if (_openTrayItem is not null) _openTrayItem.Text = Localization.T("tray-open");
         if (_exitTrayItem is not null) _exitTrayItem.Text = Localization.T("tray-exit");
+        if (_trayIcon is not null)
+            _trayIcon.Text = _reportedMonitoringError == 0 ? "Limiter" : Localization.T("tray-monitoring-error");
     }
 
-    private void ShowFromTray()
+    internal void ReportMonitoringError(int error)
+    {
+        if (error == _reportedMonitoringError) return;
+        _reportedMonitoringError = error;
+        if (_trayIcon is null) return;
+        _trayIcon.Text = error == 0 ? "Limiter" : Localization.T("tray-monitoring-error");
+        if (error == 0) return;
+        _trayIcon.BalloonTipTitle = "Limiter";
+        _trayIcon.BalloonTipText = Localization.T("packet-monitoring-stopped-windows-error-0", error);
+        _trayIcon.BalloonTipIcon = System.Windows.Forms.ToolTipIcon.Error;
+        _trayIcon.ShowBalloonTip(10000);
+    }
+
+    internal void ShowFromTray()
     {
         Show();
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;

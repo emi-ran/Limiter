@@ -1,6 +1,7 @@
 {
   "tray-open": { "tr": "Aç", "en": "Open" },
   "tray-exit": { "tr": "Çıkış", "en": "Exit" },
+  "tray-monitoring-error": { "tr": "Limiter · Paket izleme durdu", "en": "Limiter · Packet monitoring stopped" },
   "no-rules": {
     "tr": "Kural yok",
     "en": "No rules"
@@ -58,8 +59,8 @@
     "en": "English is used when the system language is not Turkish or English."
   },
   "starts-elevated-when-you-sign-in-re-enable-this-option-if-you-move-the": {
-    "tr": "Oturum açıldığında yönetici yetkisiyle başlatır. Uygulamayı taşırsanız bu seçeneği yeniden etkinleştirin.",
-    "en": "Starts elevated when you sign in. Re-enable this option if you move the application."
+    "tr": "Oturum açıldığında tray'de yönetici yetkisiyle başlatır. Yalnızca Program Files altına kurulan sürümlerde kullanılabilir.",
+    "en": "Starts in the system tray with administrator privileges when you sign in. Available only for installations under Program Files."
   },
   "language-changes-take-effect-immediately": {
     "tr": "Dil değişikliği hemen uygulanır.",
@@ -338,8 +339,8 @@
     "en": "The process has exited or no longer belongs to this application."
   },
   "limiter-is-already-running-close-the-existing-window-first": {
-    "tr": "Limiter zaten açık. Önce eski pencereyi kapatın.",
-    "en": "Limiter is already running. Close the existing window first."
+    "tr": "Limiter zaten açık. Sistem tepsisindeki simgeden açabilirsiniz.",
+    "en": "Limiter is already running. Open it from the system tray."
   },
   "0-applications-1-processes": {
     "tr": "{0} uygulama · {1} process",
@@ -392,5 +393,17 @@
   "startup-executable-required": {
     "tr": "Windows başlangıcını ayarlamak için Limiter.exe dosyasını açın.",
     "en": "Open Limiter.exe to configure Windows startup."
+  },
+  "startup-requires-program-files": {
+    "tr": "Windows ile başlatma yalnızca Program Files altına kurulan sürümde kullanılabilir. Kurulum paketini kullanın.",
+    "en": "Start with Windows is available only for installations under Program Files. Use the installer."
+  },
+  "rules-could-not-be-loaded": {
+    "tr": "Kayıtlı kurallar okunamadı; dosya korunuyor: ",
+    "en": "Saved rules could not be loaded; the file is being preserved: "
+  },
+  "rules-could-not-be-saved-until-the-file-is-fixed": {
+    "tr": "Kural dosyasını düzeltin veya kaldırın, ardından Limiter’ı yeniden başlatın. O zamana kadar yeni kural kaydedilemez.",
+    "en": "Fix or remove the rule file, then restart Limiter before saving rules."
   }
 }

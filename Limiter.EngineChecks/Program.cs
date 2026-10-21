@@ -33,6 +33,73 @@ static byte[] TcpPacket(bool inbound, int payloadLength)
     return packet;
 }
 
+// Windows ACL policy regression cases require no elevated writes to Program Files.
+static void CheckStartupSecurity()
+{
+    static System.Security.AccessControl.DirectorySecurity Security(string sddl)
+    {
+        var result = new System.Security.AccessControl.DirectorySecurity();
+        result.SetSecurityDescriptorSddlForm(sddl);
+        return result;
+    }
+    Require(StartupRegistration.IsProtectedSecurity(Security("O:BAG:BAD:P(A;;FA;;;BA)(A;;FA;;;SY)(A;;FRFX;;;BU)")),
+        "Administrator-owned read-only installation was rejected.");
+    foreach (string unsafeAcl in new[] {
+        "O:BAG:BAD:P(A;;FA;;;WD)", // Everyone full control
+        "O:BAG:BAD:P(A;;WD;;;AU)", // Authenticated Users may write
+        "O:BAG:BAD:P(A;;DC;;;BU)", // parent can delete dependencies
+        "O:BAG:BAD:P(A;OICIIO;GW;;;BU)", // inherit-only dependency grant
+        "O:BAG:BAD:NO_ACCESS_CONTROL", // null DACL
+        "O:BUG:BAD:P(A;;FRFX;;;BU)" // user-controlled owner
+    })
+        Require(!StartupRegistration.IsProtectedSecurity(Security(unsafeAcl)), "Unsafe startup ACL accepted: " + unsafeAcl);
+    // Program Files commonly grants CREATOR OWNER full control only to descendants.
+    const string safeAncestor = "O:BAG:BAD:P(A;OICI;FA;;;BA)(A;OICI;FA;;;SY)(A;OICI;FRFX;;;BU)(A;OICIIO;FA;;;CO)";
+    Require(StartupRegistration.IsProtectedSecurity(Security(safeAncestor), ancestor: true),
+        "Safe Program Files ancestor with inherit-only CREATOR OWNER grant was rejected.");
+    Require(!StartupRegistration.IsProtectedSecurity(Security(safeAncestor)),
+        "Inherit-only mutation grant inside the installation was accepted.");
+    foreach (string unsafeAncestor in new[] {
+        "O:BAG:BAD:P(A;;DC;;;BU)", // delete children
+        "O:BAG:BAD:P(A;;SD;;;BU)", // delete this ancestor
+        "O:BAG:BAD:P(A;;WD;;;BU)", // change DACL
+        "O:BAG:BAD:P(A;;WO;;;BU)", // take ownership
+        "O:BAG:BAD:P(A;;GA;;;BU)" // unmapped generic-all includes replacement rights
+    })
+        Require(!StartupRegistration.IsProtectedSecurity(Security(unsafeAncestor), ancestor: true),
+            "Unsafe effective ancestor rights accepted: " + unsafeAncestor);
+    Require(!StartupRegistration.HasProtectedInstallFiles(Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Guid.NewGuid().ToString(), "Limiter.exe")),
+        "Missing installation passed actual protection checks.");
+    string root = Path.Combine(Path.GetTempPath(), "Limiter-security-" + Guid.NewGuid());
+    Directory.CreateDirectory(root);
+    try
+    {
+        Require(!StartupRegistration.IsProtectedEntry(new DirectoryInfo(root)), "User-writable directory accepted.");
+        string target = Path.Combine(root, "target with spaces"), junction = Path.Combine(root, "junction with spaces");
+        Directory.CreateDirectory(target);
+        var start = new ProcessStartInfo("cmd.exe")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            Arguments = $"/d /c \"mklink /J \"{junction}\" \"{target}\"\""
+        };
+        using var command = Process.Start(start)!;
+        command.WaitForExit();
+        Require(command.ExitCode == 0, "Could not create junction regression fixture.");
+        try { Require(!StartupRegistration.IsProtectedEntry(new DirectoryInfo(junction)), "Junction accepted."); }
+        finally { Directory.Delete(junction); }
+    }
+    finally { Directory.Delete(root, true); }
+}
+CheckStartupSecurity();
+string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+Require(StartupRegistration.IsProtectedInstallPath(Path.Combine(programFiles, "Limiter", "Limiter.exe")),
+    "Program Files installation path was rejected.");
+Require(!StartupRegistration.IsProtectedInstallPath(Path.Combine(Path.GetTempPath(), "Limiter.exe")),
+    "Portable start-up path was accepted.");
+Require(!StartupRegistration.IsProtectedInstallPath(Path.Combine(programFiles, "..", "Users", "Public", "Limiter.exe")),
+    "A path traversal escaped the Program Files check.");
 Require(Localization.ResolveLanguage("system", "tr-TR") == "tr", "Turkish system language ignored.");
 Require(Localization.ResolveLanguage("system", "en-GB") == "en", "English system language ignored.");
 Require(Localization.ResolveLanguage("system", "de-DE") == "en", "Unsupported system language did not fall back to English.");
@@ -163,6 +230,20 @@ try
     var ruleStore = new RuleStore(ruleFile);
     Require(ruleStore.GetLimit("legacy.exe", false) == 64 && ruleStore.GetLimit("legacy.exe", true) == 32,
         "Legacy rules lost enabled defaults.");
+    string malformedFile = System.IO.Path.Combine(ruleTestDirectory, "malformed.json");
+    File.WriteAllText(malformedFile, "[{\"Path\":\"kept.exe\",\"DownloadKBps\":64}");
+    var malformedStore = new RuleStore(malformedFile);
+    bool rejectedSave = false;
+    try { malformedStore.Set(new AppRule { Path = "new.exe", DownloadKBps = 16 }); }
+    catch (InvalidOperationException) { rejectedSave = true; }
+    Require(malformedStore.LoadError is not null && rejectedSave &&
+        File.ReadAllText(malformedFile) == "[{\"Path\":\"kept.exe\",\"DownloadKBps\":64}",
+        "Malformed rules were not preserved or saving was allowed.");
+    string partialFile = System.IO.Path.Combine(ruleTestDirectory, "missing-path.json");
+    File.WriteAllText(partialFile, "[{\"Path\":\"valid.exe\",\"DownloadKBps\":32},{\"DownloadKBps\":64}]");
+    var partialStore = new RuleStore(partialFile);
+    Require(partialStore.LoadError is not null && partialStore.GetLimit("valid.exe", false) == 0,
+        "A partially valid rule file was applied.");
     using var directionEngine = new TrafficEngine(ruleStore);
     var ownPath = Environment.ProcessPath!;
     int ownPid = Environment.ProcessId;
@@ -250,13 +331,26 @@ using (var listener = new TcpListener(IPAddress.Loopback, 0))
         "Process totals differ from application totals.");
     Require(Math.Abs(usage.Processes.Sum(process => process.DownloadRate) - usage.DownloadRate) < 0.001,
         "Process rate differs from application rate.");
+    var processSeen = (Dictionary<string, Dictionary<int, long>>)typeof(TrafficEngine)
+        .GetField("_processSeen", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+        .GetValue(engine)!;
+    processSeen[owner.Path][owner.ProcessId] = Stopwatch.GetTimestamp() - (long)(Stopwatch.Frequency * 600);
+    var pruned = engine.Snapshot().Single(app => app.Path == owner.Path);
+    Require(pruned.DownloadBytes == 1500 && pruned.Processes.Count == 0,
+        "Inactive PID history was not pruned or the application total was lost.");
+    engine.RecordSent(owner, 1, false);
+    Require(engine.Snapshot().Single(app => app.Path == owner.Path).Processes
+        .Any(process => process.ProcessId == owner.ProcessId), "Pruned PID row did not return with new traffic.");
     Console.WriteLine("Application and PID traffic totals: OK");
     int originalAppDown = usage.DownloadLimit;
     engine.SetProcessLimits(owner.Path, owner.ProcessId, 64, 0);
+    processSeen[owner.Path][owner.ProcessId] = Stopwatch.GetTimestamp() - (long)(Stopwatch.Frequency * 600);
     var limited = engine.Snapshot().Single(app => app.Path == owner.Path);
     Require(limited.DownloadLimit == originalAppDown &&
         limited.Processes.Single(process => process.ProcessId == owner.ProcessId).DownloadLimit == 64,
         "PID rule changed the application rule.");
+    // Removal is independent of inactivity pruning (already checked above).
+    engine.RecordSent(owner, 1, false);
     engine.SetProcessLimits(owner.Path, owner.ProcessId, 0, 0);
     Require(engine.Snapshot().Single(app => app.Path == owner.Path).Processes
         .Single(process => process.ProcessId == owner.ProcessId).DownloadLimit == 0,

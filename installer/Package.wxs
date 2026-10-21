@@ -8,8 +8,6 @@
     <Property Id="STARTWITHWINDOWS" Secure="yes" />
     <Property Id="DESKTOPSHORTCUT" Secure="yes" />
     <Property Id="INSTALLLEVEL" Value="1" />
-    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
-    <Property Id="INSTALLFOLDER" Secure="yes" />
     <StandardDirectory Id="ProgramFiles6432Folder">
       <Directory Id="INSTALLFOLDER" Name="Limiter">
         <Component Id="ApplicationExecutable" Guid="*">
@@ -36,9 +34,11 @@
       </Files>
     </Feature>
     <UIRef Id="LimiterUI" />
+    <CustomAction Id="AdoptWindowsStartup" FileRef="LimiterExe" ExeCommand="--installer-adopt-startup &quot;[UserSID]&quot;" Execute="commit" Impersonate="no" Return="check" />
     <CustomAction Id="EnableWindowsStartup" FileRef="LimiterExe" ExeCommand="--installer-startup &quot;[UserSID]&quot;" Execute="commit" Impersonate="no" Return="check" />
     <CustomAction Id="RemoveWindowsStartup" FileRef="LimiterExe" ExeCommand="--installer-remove-startup" Execute="deferred" Impersonate="no" Return="check" />
     <InstallExecuteSequence>
+      <Custom Action="AdoptWindowsStartup" Before="EnableWindowsStartup" Condition="NOT Installed AND NOT REMOVE" />
       <Custom Action="EnableWindowsStartup" Before="InstallFinalize" Condition="STARTWITHWINDOWS = &quot;1&quot; AND NOT Installed AND NOT REMOVE" />
       <Custom Action="RemoveWindowsStartup" Before="RemoveFiles" Condition="Installed AND REMOVE = &quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
     </InstallExecuteSequence>

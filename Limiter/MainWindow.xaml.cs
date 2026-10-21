@@ -53,12 +53,22 @@ public partial class MainWindow : Window
         Closed += (_, _) => { DisposeTray(); _timer.Stop(); _engine.Dispose(); };
     }
 
+    internal bool HasRuleLoadError => _engine.RuleLoadError is { Length: > 0 };
+
+    private void UpdateStatusText()
+    {
+        string status = _engine.Status;
+        if (_engine.RuleLoadError is { Length: > 0 } error)
+            status = Localization.T("rules-could-not-be-loaded") + error + " · " + status;
+        StatusText.Text = status;
+    }
+
     internal bool StartMonitoring()
     {
         try
         {
             _engine.Start();
-            StatusText.Text = _engine.Status;
+            UpdateStatusText();
             _timer.Tick += (_, _) => RefreshRows();
             _timer.Start();
             return true;
@@ -72,7 +82,8 @@ public partial class MainWindow : Window
 
     private void RefreshRows()
     {
-        StatusText.Text = _engine.Status;
+        UpdateStatusText();
+        ReportMonitoringError(_engine.MonitoringError);
         var snapshot = _engine.Snapshot();
         TotalDownload.Text = AppRow.FormatRate(snapshot.Sum(item => item.DownloadRate));
         TotalUpload.Text = AppRow.FormatRate(snapshot.Sum(item => item.UploadRate));
@@ -127,7 +138,10 @@ public partial class MainWindow : Window
             {
                 _startupEnabled = StartupRegistration.IsEnabled();
                 StartWithWindows.IsChecked = _startupEnabled;
-                StartWithWindows.IsEnabled = true;
+                bool canRegister = StartupRegistration.CanRegisterCurrentExecutable();
+                StartWithWindows.IsEnabled = canRegister || _startupEnabled;
+                if (!canRegister && !_startupEnabled)
+                    SettingsMessage.Text = Localization.T("startup-requires-program-files");
             }
             catch (Exception ex)
             {
@@ -416,6 +430,9 @@ public sealed class AppRow(AppUsage initialUsage, AppRow? parent = null) : INoti
     }
     internal void UpdateProcesses(List<AppUsage> processes)
     {
+        var active = processes.Select(process => process.ProcessId).ToHashSet();
+        foreach (int pid in Children.Keys.Where(pid => !active.Contains(pid)).ToArray())
+            Children.Remove(pid);
         foreach (var process in processes)
         {
             if (Children.TryGetValue(process.ProcessId, out var row)) row.Update(process);
@@ -427,13 +444,14 @@ public sealed class AppRow(AppUsage initialUsage, AppRow? parent = null) : INoti
     public void Update(AppUsage current)
     {
         string oldName = Name, oldDownload = DownloadText, oldUpload = UploadText;
-        string oldTotal = TotalText, oldLimit = LimitText;
+        string oldTotal = TotalText, oldLimit = LimitText, oldParentRule = ParentRuleText;
         usage = current;
         if (oldName != Name) Notify(nameof(Name));
         if (oldDownload != DownloadText) Notify(nameof(DownloadText));
         if (oldUpload != UploadText) Notify(nameof(UploadText));
         if (oldTotal != TotalText) Notify(nameof(TotalText));
         if (oldLimit != LimitText) Notify(nameof(LimitText));
+        if (oldParentRule != ParentRuleText) Notify(nameof(ParentRuleText));
     }
     internal void RefreshLanguage()
     {

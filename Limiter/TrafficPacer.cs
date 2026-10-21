@@ -57,4 +57,14 @@ internal sealed class TrafficPacer
         foreach (var key in _reserved.Keys.Where(key => string.Equals(key.Path, path, StringComparison.OrdinalIgnoreCase)).ToArray())
             _reserved.Remove(key);
     }
+
+    internal void ForgetProcess(string path, int processId)
+    {
+        foreach (var key in _reserved.Keys.Where(key => key.ProcessId == processId &&
+            string.Equals(key.Path, path, StringComparison.OrdinalIgnoreCase)).ToArray())
+            _reserved.Remove(key);
+        foreach (var key in _sent.Keys.Where(key => key.ProcessId == processId &&
+            string.Equals(key.Path, path, StringComparison.OrdinalIgnoreCase)).ToArray())
+            _sent.Remove(key);
+    }
 }

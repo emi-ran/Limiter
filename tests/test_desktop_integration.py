@@ -12,17 +12,19 @@ class DesktopIntegrationChecks(unittest.TestCase):
         app = (ROOT / 'Limiter/App.xaml.cs').read_text()
         self.assertIn('action.Arguments = "--tray";', registration)
         self.assertIn('e.Args.Contains("--tray", StringComparer.OrdinalIgnoreCase)', app)
-        self.assertIn('if (!startInTray || !monitoringStarted) window.Show();', app)
+        self.assertIn('if (!startInTray || !monitoringStarted || window.HasRuleLoadError) window.Show();', app)
 
     def test_hidden_startup_failure_is_visible(self):
         app = (ROOT / 'Limiter/App.xaml.cs').read_text()
         self.assertIn('bool monitoringStarted = window.StartMonitoring();', app)
-        self.assertIn('if (!startInTray || !monitoringStarted) window.Show();', app)
+        self.assertIn('if (!startInTray || !monitoringStarted || window.HasRuleLoadError) window.Show();', app)
 
     def test_migration_only_updates_matching_executable(self):
         startup = (ROOT / 'Limiter/StartupRegistration.cs').read_text()
         self.assertIn('internal static void MigrateCurrentExecutable()', startup)
-        self.assertIn('string.Equals((string)action.Path, Environment.ProcessPath, StringComparison.OrdinalIgnoreCase)', startup)
+        self.assertIn('string.Equals(actionPath, Environment.ProcessPath, StringComparison.OrdinalIgnoreCase)', startup)
+        self.assertIn('internal static bool IsProtectedInstallPath', startup)
+        self.assertIn('startup-requires-program-files', startup)
         self.assertIn('folder.RegisterTaskDefinition(TaskName, definition, 6,', startup)
         window = (ROOT / 'Limiter/MainWindow.xaml.cs').read_text()
         self.assertIn('StartupRegistration.MigrateCurrentExecutable();', window)

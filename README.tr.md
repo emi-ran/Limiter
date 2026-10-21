@@ -25,7 +25,7 @@ Windows x64 ve yönetici yetkisi gerekir. Yeni CI paketlerinde .NET çalışma z
 | `Limiter-<sürüm>-portable-win-x64.exe` | Kurulum gerektirmeyen tek EXE. Bağımlılıklar ilk açılışta .NET önbelleğine çıkarılır. |
 | `Limiter-<sürüm>-portable-win-x64.zip` | Klasöre çıkarıp `Limiter.exe` dosyasını çalıştırın; DLL ve sürücü dosyalarını birlikte tutun. |
 
-İki installer da kurulum klasörü, isteğe bağlı masaüstü kısayolu ve kuran kullanıcı için **Windows ile başlat** seçeneklerini sunar. İki seçenek varsayılan kapalıdır; Başlat menüsü kısayolu her zaman oluşturulur. Başlangıç, Ayarlar ile aynı yönetici yetkili Görev Zamanlayıcı kaydını kullanır. Kaldırma işlemi kurulu EXE'yi hedefleyen başlangıç görevlerini temizler; kişisel ayarları ve kuralları korur. Sessiz MSI kurulumunda seçenekleri açmak için `DESKTOPSHORTCUT=1 STARTWITHWINDOWS=1` verin.
+İki installer da sabit `%ProgramFiles%\Limiter` kurulum klasörünü kullanır; kurulum dizini değiştirilemez. İsteğe bağlı masaüstü kısayolu ve kuran kullanıcı için **Windows ile başlat** seçeneklerini sunar. İki seçenek varsayılan kapalıdır; Başlat menüsü kısayolu her zaman oluşturulur. Başlangıç, Ayarlar ile aynı yönetici yetkili Görev Zamanlayıcı kaydını kullanır. Kaldırma işlemi kurulu EXE'yi hedefleyen başlangıç görevlerini temizler; kişisel ayarları ve kuralları korur. Sessiz MSI kurulumunda seçenekleri açmak için `DESKTOPSHORTCUT=1 STARTWITHWINDOWS=1` verin.
 
 `SHA256SUMS.txt`, paketlerin doğrulama özetlerini içerir. Portable sürümler de ayarları ve kuralları `%LOCALAPPDATA%\Limiter` altında saklar. `0` sınırsızdır; en küçük pozitif sınır `16 KB/sn` olur.
 
@@ -34,7 +34,7 @@ Windows x64 ve yönetici yetkisi gerekir. Yeni CI paketlerinde .NET çalışma z
 - Elle çalıştırınca pencere açılır; Windows ile otomatik başlangıçta yalnızca tray simgesi görünür.
 - Pencerenin **X** düğmesi tray'e gizler; trafik izleme ve kurallar çalışmaya devam eder.
 - Tray simgesine çift tıklayın veya menüden **Aç** seçin. Tamamen kapatmak için **Çıkış** seçin.
-- Eski başlangıç kaydı bu sürüm ilk açıldığında `--tray` kullanacak şekilde yenilenir; hata varsa Ayarlar'da gösterilir.
+- Bu kurulu EXE'yi hedefleyen eski başlangıç kaydı ilk açılışta `--tray` kullanacak şekilde yenilenir; hata varsa Ayarlar'da gösterilir.
 
 ## Trafik ve kurallar
 
@@ -60,7 +60,7 @@ Hızlar başarıyla iletilen paketlerin yaklaşık **3 saniyelik ortalamasıdır
 | Dil | **Sistem dili** varsayılandır. Türkçe ve İngilizce desteklenir; diğer sistem dillerinde İngilizce kullanılır. Açıkça Türkçe veya English seçilebilir. **Uygula**, seçimi kaydeder ve dili yeniden başlatmadan değiştirir. |
 | Windows ile başlat | Varsayılan kapalıdır. Anahtar hemen uygulanır; mevcut kullanıcı oturum açtığında Limiter'ı yönetici yetkisiyle tray'de başlatır; pencereyi açmaz. |
 
-Dil tercihi `%LOCALAPPDATA%\Limiter\settings.json` içinde saklanır. Başlangıç için kullanıcıya özel `Limiter.Startup.<SID>` Görev Zamanlayıcı kaydı kullanılır; parola saklanmaz. Kapatınca yalnızca bu kayıt silinir. Uygulamayı başka klasöre taşırsanız seçeneği kapatıp yeniden açın.
+Dil tercihi `%LOCALAPPDATA%\Limiter\settings.json` içinde saklanır. Başlangıç için kullanıcıya özel `Limiter.Startup.<SID>` Görev Zamanlayıcı kaydı kullanılır; parola saklanmaz. Kapatınca yalnızca bu kayıt silinir. Otomatik başlangıç yalnızca korumalı Program Files dizinine kurulmuş kopyalarda desteklenir. Portable EXE/ZIP kopyalarında ve diğer konumlarda başlangıç kaydı reddedilir; bu özellik için installer kullanın.
 
 Başlangıç seçeneği ayrı bir Windows servisi değildir. Yönetici olmayan hesaplarda gerekli yetki olmadan kayıt oluşturulamaz. Kaydetme veya başlangıç kaydı başarısız olduğunda seçim geri alınır ve hata gösterilir.
 

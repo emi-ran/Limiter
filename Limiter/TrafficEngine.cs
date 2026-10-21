@@ -14,6 +14,7 @@ public sealed class TrafficEngine : IDisposable
     private Dictionary<FlowKey, FlowOwner> _tcpFlows = new();
     private readonly Dictionary<string, AppUsage> _apps = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Dictionary<int, AppUsage>> _processes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Dictionary<int, long>> _processSeen = new(StringComparer.OrdinalIgnoreCase);
     private readonly TrafficPacer _pacer = new();
     private sealed record ProcessRule(AppRule Settings, Process Process);
     private readonly Dictionary<string, Dictionary<int, ProcessRule>> _processRules = new(StringComparer.OrdinalIgnoreCase);
@@ -23,6 +24,7 @@ public sealed class TrafficEngine : IDisposable
 
     public TrafficEngine() : this(new RuleStore()) { }
     internal TrafficEngine(RuleStore rules) => _rules = rules;
+    internal string? RuleLoadError => _rules.LoadError;
     private nint _flowHandle;
     private nint _networkHandle;
     private volatile bool _running;
@@ -31,6 +33,8 @@ public sealed class TrafficEngine : IDisposable
     private long _blockedPackets;
 
     internal bool BlockerEnabled { get { lock (_sync) return _blockerEnabled; } }
+
+    internal int MonitoringError => Volatile.Read(ref _networkError);
 
     internal void SetBlockerEnabled(bool enabled)
     {
@@ -80,6 +84,8 @@ public sealed class TrafficEngine : IDisposable
     private int _networkError;
     private long _lastSnapshotTicks;
     private const long MaxPendingBytes = 16 * 1024 * 1024;
+    // Process rows are detailed history; application session totals stay for the whole run.
+    private static readonly long ProcessRetentionTicks = (long)(Stopwatch.Frequency * 300);
     public string Status
     {
         get
@@ -121,6 +127,7 @@ public sealed class TrafficEngine : IDisposable
         lock (_sync)
         {
             long now = Stopwatch.GetTimestamp();
+            PruneProcesses(now);
             double elapsed = Math.Max(0.05, (now - _lastSnapshotTicks) / (double)Stopwatch.Frequency);
             _lastSnapshotTicks = now;
             double weight = 1 - Math.Exp(-elapsed / 3.0);
@@ -174,9 +181,49 @@ public sealed class TrafficEngine : IDisposable
         {
             _apps[path] = new AppUsage { Path = path, Name = System.IO.Path.GetFileNameWithoutExtension(path) };
             _processes[path] = new Dictionary<int, AppUsage>();
+            _processSeen[path] = new Dictionary<int, long>();
         }
         if (!_processes[path].ContainsKey(pid))
             _processes[path][pid] = new AppUsage { Path = path, Name = _apps[path].Name, ProcessId = pid };
+        _processSeen[path][pid] = Stopwatch.GetTimestamp();
+    }
+
+    // Called while holding _sync.
+    private void TouchProcess(string path, int pid)
+    {
+        if (_processSeen.TryGetValue(path, out var seen) && seen.ContainsKey(pid))
+            seen[pid] = Stopwatch.GetTimestamp();
+        else EnsureProcess(path, pid);
+    }
+
+    // Called while holding _sync.
+    private void PruneProcesses(long now)
+    {
+        foreach (var pair in _processes)
+        {
+            if (!_processSeen.TryGetValue(pair.Key, out var seen)) continue;
+            foreach (int pid in pair.Value.Keys
+                .Where(pid => (!seen.TryGetValue(pid, out long lastSeen) || now - lastSeen > ProcessRetentionTicks)
+                    && GetProcessRule(pair.Key, pid) is null)
+                .ToArray())
+            {
+                pair.Value.Remove(pid);
+                seen.Remove(pid);
+                _pacer.ForgetProcess(pair.Key, pid);
+            }
+        }
+        foreach (var pair in _processRules.ToArray())
+        {
+            foreach (int pid in pair.Value.Keys.ToArray())
+            {
+                var rule = pair.Value[pid];
+                if (!rule.Process.HasExited) continue;
+                pair.Value.Remove(pid);
+                rule.Process.Dispose();
+                _pacer.ForgetProcess(pair.Key, pid);
+            }
+            if (pair.Value.Count == 0) _processRules.Remove(pair.Key);
+        }
     }
 
     public void SetLimits(string path, int downloadKBps, int uploadKBps)
@@ -207,7 +254,11 @@ public sealed class TrafficEngine : IDisposable
                 if (!_processRules.TryGetValue(settings.Path, out var rules)) _processRules[settings.Path] = rules = new();
                 if (settings.DownloadKBps == 0 && settings.UploadKBps == 0 && !settings.BlockDownload && !settings.BlockUpload)
                 {
-                    if (rules.Remove(pid, out var removed)) removed.Process.Dispose();
+                    if (rules.Remove(pid, out var removed))
+                    {
+                        removed.Process.Dispose();
+                        _pacer.ForgetProcess(settings.Path, pid);
+                    }
                 }
                 else
                 {
@@ -240,6 +291,7 @@ public sealed class TrafficEngine : IDisposable
         if (!rule.Process.HasExited) return rule;
         rules.Remove(pid);
         rule.Process.Dispose();
+        _pacer.ForgetProcess(path, pid);
         return null;
     }
 
@@ -357,6 +409,7 @@ public sealed class TrafficEngine : IDisposable
                     string path = owner.Path;
                     matchedPath = path;
                     matchedPid = owner.ProcessId;
+                    TouchProcess(path, owner.ProcessId);
                     Interlocked.Increment(ref _matchedPackets);
                     int limit = GetAppLimit(path, outbound);
                     int processLimit = GetProcessLimit(path, owner.ProcessId, outbound);
@@ -541,6 +594,7 @@ public sealed class TrafficEngine : IDisposable
         lock (_sync)
         {
             if (!_apps.TryGetValue(owner.Path, out var app)) return;
+            TouchProcess(owner.Path, owner.ProcessId);
             if (outbound) app.UploadBytes += bytes;
             else app.DownloadBytes += bytes;
             if (_processes[owner.Path].TryGetValue(owner.ProcessId, out var process))
@@ -555,8 +609,8 @@ public sealed class TrafficEngine : IDisposable
     {
         _running = false;
         _wake.Set();
-        if (_flowHandle != 0 && _flowHandle != Native.InvalidHandle) Native.WinDivertShutdown(_flowHandle, 1);
-        if (_networkHandle != 0 && _networkHandle != Native.InvalidHandle) Native.WinDivertShutdown(_networkHandle, 1);
+        if (_flowHandle != 0 && _flowHandle != Native.InvalidHandle) Native.WinDivertShutdown(_flowHandle, Native.ShutdownReceive);
+        if (_networkHandle != 0 && _networkHandle != Native.InvalidHandle) Native.WinDivertShutdown(_networkHandle, Native.ShutdownReceive);
         try { _flowTask?.Wait(TimeSpan.FromSeconds(2)); } catch { }
         try { _networkTask?.Wait(TimeSpan.FromSeconds(2)); } catch { }
         try { _tcpTask?.Wait(TimeSpan.FromSeconds(2)); } catch { }

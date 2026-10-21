@@ -25,7 +25,7 @@ Requires Windows x64 and administrator privileges. New CI packages include the .
 | `Limiter-<version>-portable-win-x64.exe` | Single executable; run without installing. Dependencies extract into the .NET cache on first launch. |
 | `Limiter-<version>-portable-win-x64.zip` | Extract the folder and run `Limiter.exe`. Keep its DLL and driver files together. |
 
-Both installers offer an installation folder, an optional desktop shortcut and **Start with Windows** for the installing user. Both options default to off; a Start menu shortcut is always installed. Startup uses the same elevated Task Scheduler entry as Settings. Uninstall removes startup tasks pointing to the installed executable and preserves user settings and rules. For silent MSI installation, pass `DESKTOPSHORTCUT=1 STARTWITHWINDOWS=1` to enable the options.
+Both installers use the fixed `%ProgramFiles%\Limiter` installation directory; changing the install directory is not supported. They offer an optional desktop shortcut and **Start with Windows** for the installing user. Both options default to off; a Start menu shortcut is always installed. Startup uses the same elevated Task Scheduler entry as Settings. Uninstall removes startup tasks pointing to the installed executable and preserves user settings and rules. For silent MSI installation, pass `DESKTOPSHORTCUT=1 STARTWITHWINDOWS=1` to enable the options.
 
 `SHA256SUMS.txt` contains package hashes. Portable builds still store settings and rules under `%LOCALAPPDATA%\Limiter`. `0` means unlimited; the minimum positive limit is `16 KB/s`.
 
@@ -33,7 +33,7 @@ Both installers offer an installation folder, an optional desktop shortcut and *
 
 Manual launches show the window; Windows logon launches use `--tray` without showing it.
 Closing the window hides it while monitoring continues. Double-click the tray icon or
-choose **Open** to restore; choose **Exit** to stop Limiter. Existing enabled startup tasks
+choose **Open** to restore; choose **Exit** to stop Limiter. Existing enabled startup tasks targeting this installed executable
 are refreshed on first launch; registration failures appear in Settings.
 
 ## Traffic and rules
@@ -60,7 +60,7 @@ The **Settings** tab currently offers:
 | Language | **System language** is the default. Turkish and English are supported; other system languages fall back to English. You can explicitly select Türkçe or English. **Apply** saves the preference and changes the interface immediately. |
 | Start with Windows | Off by default. The switch takes effect immediately and starts Limiter in the system tray with administrator privileges when the current user signs in. |
 
-The language preference is stored in `%LOCALAPPDATA%\Limiter\settings.json`. Startup uses a per-user Task Scheduler entry named `Limiter.Startup.<SID>`; no password is stored. Turning it off deletes only that entry. If you move the application, turn the option off and on again to update its path.
+The language preference is stored in `%LOCALAPPDATA%\Limiter\settings.json`. Startup uses a per-user Task Scheduler entry named `Limiter.Startup.<SID>`; no password is stored. Turning it off deletes only that entry. Startup is supported only by installed copies under the protected Program Files directory. Portable EXE/ZIP copies and other locations are rejected for startup registration; use an installer instead.
 
 Startup does not show the application window; it is not a separate Windows service. Accounts without the required administrator privileges cannot create the startup entry. If saving or startup registration fails, the selection is rolled back and an error is shown.
 
