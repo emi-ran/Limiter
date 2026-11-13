@@ -1,4 +1,8 @@
 {
+  "update-title": { "tr": "Yeni Limiter sürümü", "en": "New Limiter version" },
+  "update-message": { "tr": "Limiter {0} çıktı. İndirme sayfası için tepsi simgesine sağ tıklayın.", "en": "Limiter {0} is available. Right-click the tray icon for the download page." },
+  "update-menu": { "tr": "Limiter {0} sürümünü indir", "en": "Download Limiter {0}" },
+  "update-open-error": { "tr": "İndirme sayfası açılamadı. GitHub'daki Limiter Releases sayfasını ziyaret edin.", "en": "Could not open the download page. Visit Limiter Releases on GitHub." },
   "priorities": { "tr": "Öncelikler", "en": "Priorities" },
   "priorities-toggle-hint": { "tr": "Uygulama önceliklerini aç veya kapat; kurallar korunur.", "en": "Enable or disable application priorities; rules are preserved." },
   "priority": { "tr": "Uygulama önceliği", "en": "Application priority" },

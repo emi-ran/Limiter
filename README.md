@@ -35,6 +35,7 @@ Manual launches show the window; Windows logon launches use `--tray` without sho
 Closing the window hides it while monitoring continues. Double-click the tray icon or
 choose **Open** to restore; choose **Exit** to stop Limiter. Existing enabled startup tasks targeting this installed executable
 are refreshed on first launch; registration failures appear in Settings.
+Limiter checks GitHub for the latest stable release at startup and every 12 hours while running. When a newer version is available, it shows a notification and a download link in the tray menu. It does not download or install updates automatically; failed checks are retried at the next interval.
 
 ## Traffic and rules
 
@@ -112,6 +113,8 @@ This test blocks only its own test process, uses a temporary rules file, and sen
 ## CI and releases
 
 [Windows CI](https://github.com/emi-ran/Limiter/actions/workflows/windows.yml) builds in Release mode and runs engine checks on `main` pushes, pull requests and manual runs. It creates self-contained EXE/MSI installers, a portable EXE, a portable ZIP and SHA-256 checksums in the `Limiter-win-x64-packages` artifact, retained for 14 days. Packages include both READMEs, screenshots and license notices. The live blocking test is not run in CI.
+Record notable changes in [CHANGELOG.md](CHANGELOG.md) under Unreleased as they are made. Before tagging a release, move those entries under the new version heading and prepare the separate release notes.
+
 
 **GitHub Releases are published only when a version tag is pushed** (for example, `v0.14` or `v0.14.1`). A regular `main` push does not create a Release. Write English release notes in `docs/releases/<tag>.md` and commit them before tagging. Missing or empty notes fail the tagged build. After checks pass, all four packages, checksums and those release notes are published. The tag must match the project Version; v0.14 matches 0.14.0. See [v0.14 release notes](docs/releases/v0.14.md). Example for a new version:
 

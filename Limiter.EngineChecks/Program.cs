@@ -16,6 +16,17 @@ static void Require(bool condition, string message)
     if (!condition) throw new Exception(message);
 }
 
+var installedVersion = new Version(0, 15, 0, 0);
+string Release(string tag, bool prerelease = false, bool draft = false) =>
+    System.Text.Json.JsonSerializer.Serialize(new { tag_name = tag, prerelease, draft });
+Require(UpdateChecker.ParseNewerVersion(Release("v0.15.1"), installedVersion) == new Version(0, 15, 1), "New release was not detected.");
+Require(UpdateChecker.ParseNewerVersion(Release("v0.15"), installedVersion) is null, "Equivalent release was reported as newer.");
+Require(UpdateChecker.ParseNewerVersion(Release("v0.14.2"), installedVersion) is null, "Older release was reported as newer.");
+Require(UpdateChecker.ParseNewerVersion(Release("v0.16.0", prerelease: true), installedVersion) is null, "Prerelease was reported as stable.");
+Require(UpdateChecker.ParseNewerVersion(Release("v0.16.0", draft: true), installedVersion) is null, "Draft was reported as stable.");
+Require(UpdateChecker.ParseNewerVersion(Release("v0.16.0-beta"), installedVersion) is null, "Invalid version was accepted.");
+Console.WriteLine("Stable release version comparison: OK");
+
 // Continuously backlogged applications must receive byte-weighted shares without starvation.
 var scheduler = new PriorityTrafficScheduler();
 scheduler.SetCapacity(1000, 1000);

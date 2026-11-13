@@ -35,6 +35,7 @@ Windows x64 ve yönetici yetkisi gerekir. Yeni CI paketlerinde .NET çalışma z
 - Pencerenin **X** düğmesi tray'e gizler; trafik izleme ve kurallar çalışmaya devam eder.
 - Tray simgesine çift tıklayın veya menüden **Aç** seçin. Tamamen kapatmak için **Çıkış** seçin.
 - Bu kurulu EXE'yi hedefleyen eski başlangıç kaydı ilk açılışta `--tray` kullanacak şekilde yenilenir; hata varsa Ayarlar'da gösterilir.
+- Limiter açılışta ve çalışırken 12 saatte bir GitHub'daki son kararlı sürümü kontrol eder. Yeni sürüm varsa bildirim ve tray menüsünde indirme bağlantısı gösterilir; otomatik indirme veya kurulum yapılmaz. İnternet veya GitHub erişimi yoksa sonraki kontrolde tekrar denenir.
 
 ## Trafik ve kurallar
 
@@ -114,6 +115,8 @@ Bu kontrol yalnızca kendi test process'ini engeller, geçici kural dosyası kul
 ## CI ve sürümler
 
 [Windows CI](https://github.com/emi-ran/Limiter/actions/workflows/windows.yml), `main` push'larında, pull request'lerde ve elle başlatıldığında Release derlemesi ve çekirdek kontrollerini çalıştırır. .NET dahil EXE/MSI installer, portable EXE, portable ZIP ve SHA-256 özetleri `Limiter-win-x64-packages` artifact'ına yüklenir; 14 gün saklanır. Paketlerde iki README, görseller ve lisans bildirimleri bulunur. Canlı engelleme testi CI'da çalışmaz.
+Önemli değişiklikleri yapıldıkça [CHANGELOG.md](CHANGELOG.md) içindeki Unreleased bölümüne ekleyin. Sürümü etiketlemeden önce kayıtları yeni sürüm başlığına taşıyın ve ayrı sürüm notlarını hazırlayın.
+
 
 **GitHub Release yalnızca sürüm etiketi push edildiğinde yayınlanır** (örneğin `v0.14` veya `v0.14.1`). Normal `main` push'u Release oluşturmaz. Etiketlemeden önce İngilizce sürüm notlarını `docs/releases/<etiket>.md` dosyasına yazıp commit edin. Notlar yoksa veya boşsa etiketli derleme başarısız olur. Kontroller geçtikten sonra dört paket, doğrulama özetleri ve bu sürüm notları yayınlanır. Etiket proje Version değeriyle eşleşmelidir; örneğin v0.14, 0.14.0 ile eşleşir. [v0.14 sürüm notları](docs/releases/v0.14.md). Yeni sürüm için örnek:
 
