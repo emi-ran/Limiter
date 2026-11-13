@@ -23,6 +23,7 @@ public sealed class AppUsage
     public bool UploadLimitEnabled { get; set; } = true;
     public bool BlockDownload { get; set; }
     public bool BlockUpload { get; set; }
+    public int Priority { get; set; } = 1;
     public AppRule? ParentRule { get; set; }
     public int AppDownloadLimit { get; set; }
     public int AppUploadLimit { get; set; }
@@ -37,6 +38,7 @@ public sealed class AppRule
     public bool UploadLimitEnabled { get; set; } = true;
     public bool BlockDownload { get; set; }
     public bool BlockUpload { get; set; }
+    public int Priority { get; set; } = 1;
 }
 
 public sealed class RuleStore

@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private readonly SettingsStore _settingsStore;
     private UserSettings _settings = new();
     private bool _startupEnabled;
+    private bool _loadingPriority;
 
     public MainWindow() : this(new SettingsStore()) { }
 
@@ -34,6 +35,11 @@ public partial class MainWindow : Window
         Localization.Current.SetLanguage(_settings.Language);
         InitializeComponent();
         LanguageChoice.SelectedValue = _settings.Language;
+        PrioritiesToggle.IsChecked = _settings.PrioritiesEnabled;
+        PriorityDownloadBox.Text = _settings.PriorityDownloadKBps.ToString();
+        PriorityUploadBox.Text = _settings.PriorityUploadKBps.ToString();
+        _engine.SetPriorityCapacity(_settings.PriorityDownloadKBps, _settings.PriorityUploadKBps);
+        _engine.SetPrioritiesEnabled(_settings.PrioritiesEnabled);
         if (settingsError is not null) SettingsMessage.Text = Localization.T("could-not-save-settings") + settingsError;
         UpdateSortDescription();
         MachineName.Text = Environment.MachineName.ToUpperInvariant();
@@ -119,6 +125,24 @@ public partial class MainWindow : Window
         UpdateSelectedTraffic();
     }
 
+    private void PrioritiesToggle_Click(object sender, RoutedEventArgs e)
+    {
+        bool enabled = PrioritiesToggle.IsChecked == true;
+        try
+        {
+            var next = _settings with { PrioritiesEnabled = enabled };
+            _settingsStore.Save(next);
+            _settings = next;
+            _engine.SetPrioritiesEnabled(enabled);
+        }
+        catch (Exception ex)
+        {
+            PrioritiesToggle.IsChecked = _settings.PrioritiesEnabled;
+            SettingsMessage.Text = Localization.T("could-not-save-settings") + ex.Message;
+            MessageBox.Show(this, SettingsMessage.Text, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private void UpdateGlobalState()
     {
         LimiterState.Text = $"Limiter {(_engine.LimiterEnabled ? "On" : "Off")} · Blocker {(_engine.BlockerEnabled ? "On" : "Off")}";
@@ -158,11 +182,15 @@ public partial class MainWindow : Window
     private void ApplySettings_Click(object sender, RoutedEventArgs e)
     {
         string preference = LanguageChoice.SelectedValue as string ?? "system";
+        if (!int.TryParse(PriorityDownloadBox.Text, out int priorityDown) || priorityDown < 0 ||
+            !int.TryParse(PriorityUploadBox.Text, out int priorityUp) || priorityUp < 0)
+        { SettingsMessage.Text = Localization.T("priority-capacity-invalid"); return; }
         try
         {
-            var next = _settings with { Language = preference };
+            var next = _settings with { Language = preference, PriorityDownloadKBps = priorityDown, PriorityUploadKBps = priorityUp };
             _settingsStore.Save(next);
             _settings = next;
+            _engine.SetPriorityCapacity(priorityDown, priorityUp);
             Localization.Current.SetLanguage(preference);
             foreach (var row in _rowByPath.Values)
             {
@@ -330,6 +358,7 @@ public partial class MainWindow : Window
             ParentRule.Text = "";
             RuleRuntime.Text = "";
             RuleControls.IsEnabled = false;
+            PriorityChoice.IsEnabled = false;
             return;
         }
         RuleControls.IsEnabled = true;
@@ -337,9 +366,31 @@ public partial class MainWindow : Window
         SelectedPath.Text = row.Path;
         DownloadBox.Text = row.DownloadLimit.ToString();
         UploadBox.Text = row.UploadLimit.ToString();
+        _loadingPriority = true;
+        PriorityChoice.SelectedIndex = Math.Clamp(row.IsProcess ? row.Parent?.Priority ?? 1 : row.Priority, 0, 2);
+        PriorityChoice.IsEnabled = !row.IsProcess;
+        _loadingPriority = false;
         LoadRuleChecks(row);
         RuleMessage.Text = "";
         UpdateSelectedTraffic();
+    }
+
+    private void PriorityChoice_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loadingPriority || AppsGrid?.SelectedItem is not AppRow { IsProcess: false } row || PriorityChoice.SelectedIndex < 0) return;
+        try
+        {
+            _engine.SetAppPriority(row.Path, PriorityChoice.SelectedIndex);
+            RuleMessage.Text = Localization.T("rule-updated");
+            RefreshRows();
+        }
+        catch (Exception ex)
+        {
+            _loadingPriority = true;
+            PriorityChoice.SelectedIndex = Math.Clamp(row.Priority, 0, 2);
+            _loadingPriority = false;
+            RuleMessage.Text = Localization.T("could-not-save") + ex.Message;
+        }
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
@@ -369,7 +420,8 @@ public partial class MainWindow : Window
     {
         Path = row.Path, DownloadKBps = down, UploadKBps = up,
         DownloadLimitEnabled = DownloadEnabled.IsChecked == true, UploadLimitEnabled = UploadEnabled.IsChecked == true,
-        BlockDownload = BlockDownload.IsChecked == true, BlockUpload = BlockUpload.IsChecked == true
+        BlockDownload = BlockDownload.IsChecked == true, BlockUpload = BlockUpload.IsChecked == true,
+        Priority = row.Priority
     };
 
     private void RuleToggle_Click(object sender, RoutedEventArgs e)
@@ -393,7 +445,7 @@ public partial class MainWindow : Window
         if (AppsGrid.SelectedItem is not AppRow row) return;
         try
         {
-            _engine.SetRule(new AppRule { Path = row.Path, BlockDownload = row.BlockDownload, BlockUpload = row.BlockUpload },
+            _engine.SetRule(new AppRule { Path = row.Path, BlockDownload = row.BlockDownload, BlockUpload = row.BlockUpload, Priority = row.Priority },
                 row.IsProcess ? row.ProcessId : 0);
             DownloadEnabled.IsChecked = UploadEnabled.IsChecked = true;
             DownloadBox.Text = UploadBox.Text = "0";
@@ -472,13 +524,14 @@ public sealed class AppRow(AppUsage initialUsage, AppRow? parent = null) : INoti
     public bool UploadLimitEnabled => usage.UploadLimitEnabled;
     public bool BlockDownload => usage.BlockDownload;
     public bool BlockUpload => usage.BlockUpload;
-    public bool HasRules => DownloadLimit > 0 || UploadLimit > 0 || BlockDownload || BlockUpload;
+    public int Priority => usage.Priority;
+    public bool HasRules => DownloadLimit > 0 || UploadLimit > 0 || BlockDownload || BlockUpload || (!IsProcess && Priority != 1);
     public string ParentRuleText => usage.ParentRule is { } rule && (rule.DownloadKBps > 0 || rule.UploadKBps > 0 || rule.BlockDownload || rule.BlockUpload)
         ? Localization.T("inherited-from-application") + DescribeRule(rule.DownloadKBps, rule.UploadKBps, rule.DownloadLimitEnabled, rule.UploadLimitEnabled, rule.BlockDownload, rule.BlockUpload) : "";
     public string DownloadText => FormatRate(usage.DownloadRate);
     public string UploadText => FormatRate(usage.UploadRate);
     public string TotalText => FormatBytes(usage.DownloadBytes + usage.UploadBytes);
-    public string LimitText => HasRules ? DescribeRule(DownloadLimit, UploadLimit, DownloadLimitEnabled, UploadLimitEnabled, BlockDownload, BlockUpload) : "—";
+    public string LimitText => HasRules ? string.Join(" · ", new[] { DownloadLimit > 0 || UploadLimit > 0 || BlockDownload || BlockUpload ? DescribeRule(DownloadLimit, UploadLimit, DownloadLimitEnabled, UploadLimitEnabled, BlockDownload, BlockUpload) : "", !IsProcess && Priority != 1 ? Localization.T(Priority == 0 ? "priority-low" : "priority-high") : "" }.Where(text => text.Length > 0)) : "—";
     private static string DescribeRule(int down, int up, bool downEnabled, bool upEnabled, bool blockDown, bool blockUp)
         => $"↓ {Direction(down, downEnabled, blockDown)} / ↑ {Direction(up, upEnabled, blockUp)}";
     private static string Direction(int value, bool enabled, bool blocked)

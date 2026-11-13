@@ -42,8 +42,10 @@ Windows x64 ve yönetici yetkisi gerekir. Yeni CI paketlerinde .NET çalışma z
 - **Uygulama ve PID:** Aynı dosya yolundaki process'ler gruplanır. Satırı okla genişleterek process'leri görün. Uygulama sınırı toplam trafiğe, PID sınırı yalnızca o process'e uygulanır; ikisi birlikte çalışabilir.
 - **Hız sınırı:** İndirme ve yükleme ayrı ayarlanır. Yön anahtarları sınırı değerini silmeden hemen açıp kapatır; yeni hız değerleri **Uygula** ile kaydedilir.
 - **Blocker:** İndirme ve yüklemeyi ayrı engeller. Engelleme hız sınırından önce uygulanır ve ilgili bekleyen paketleri kuyruktan çıkarır. Uygulama engeli alt PID'leri de kapsar.
-- **Üst anahtarlar:** Limiter ve Blocker kuralları topluca duraklatır; trafik izleme sürer ve kurallar korunur. Bu iki anahtar oturumluk olup her açılışta etkin başlar. **Priorities** henüz kullanıma açık değildir.
+- **Üst anahtarlar:** Limiter, Blocker ve Priorities kuralları topluca duraklatır; trafik izleme sürer ve kurallar korunur. Limiter ve Blocker her açılışta etkin başlar; Priorities tercihi kaydedilir.
 - **Kural listesi:** Kayıtlı kuralları görüntüler. **Sınırları kaldır** yalnızca hız sınırlarını temizler; engeller yön anahtarlarından kaldırılır.
+- **Öncelik:** Uygulama için düşük, normal veya yüksek seçin. Ayarlar'da yön başına bağlantı kapasitesini KB/sn olarak girin; `0` o yönde önceliklendirmeyi kapatır. Aynı anda bekleyen uygulamalar kapasiteyi yaklaşık 1:2:4 ağırlıkla paylaşır. Yalnız eşleşen trafik yönetilir; TCP kontrol paketleri kapsam dışıdır. İndirme paketleri bağlantıdan geçtikten sonra geciktirilir, dolayısıyla indirme önceliği veya bant genişliği garanti edilemez; UDP paketleri kaybolabilir.
+
 
 Uygulama kuralları `%LOCALAPPDATA%\Limiter\rules.json` içinde saklanır. PID kuralları kalıcı değildir; process veya Limiter kapanınca sona erer. Yalnızca bağlantısı eşleşen process'ler listelenir; kapanan process'lerin oturum toplamları korunur.
 
@@ -53,11 +55,12 @@ Hızlar başarıyla iletilen paketlerin yaklaşık **3 saniyelik ortalamasıdır
 
 ![Dil ve Windows başlangıç ayarları — İngilizce arayüz](docs/images/settings-en.png)
 
-**Ayarlar / Settings** sekmesinde iki seçenek bulunur:
+**Ayarlar / Settings** sekmesinde dil, öncelik kapasitesi ve Windows başlangıcı ayarlanır.
 
 | Seçenek | Davranış |
 | --- | --- |
 | Dil | **Sistem dili** varsayılandır. Türkçe ve İngilizce desteklenir; diğer sistem dillerinde İngilizce kullanılır. Açıkça Türkçe veya English seçilebilir. **Uygula**, seçimi kaydeder ve dili yeniden başlatmadan değiştirir. |
+| Öncelik kapasitesi | İndirme ve yükleme için KB/sn cinsinden bağlantı kapasitesi. `0` ilgili yönde önceliklendirmeyi kapatır. |
 | Windows ile başlat | Varsayılan kapalıdır. Anahtar hemen uygulanır; mevcut kullanıcı oturum açtığında Limiter'ı yönetici yetkisiyle tray'de başlatır; pencereyi açmaz. |
 
 Dil tercihi `%LOCALAPPDATA%\Limiter\settings.json` içinde saklanır. Başlangıç için kullanıcıya özel `Limiter.Startup.<SID>` Görev Zamanlayıcı kaydı kullanılır; parola saklanmaz. Kapatınca yalnızca bu kayıt silinir. Otomatik başlangıç yalnızca korumalı Program Files dizinine kurulmuş kopyalarda desteklenir. Portable EXE/ZIP kopyalarında ve diğer konumlarda başlangıç kaydı reddedilir; bu özellik için installer kullanın.

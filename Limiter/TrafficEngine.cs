@@ -7,7 +7,7 @@ internal readonly record struct FlowOwner(string Path, int ProcessId);
 
 public sealed class TrafficEngine : IDisposable
 {
-    private sealed record Packet(byte[] Data, byte[] Address, long Due, string Path, int ProcessId, bool Outbound, TcpSegmentKey? Segment);
+    internal sealed record Packet(byte[] Data, byte[] Address, long Due, string Path, int ProcessId, bool Outbound, TcpSegmentKey? Segment);
     private readonly object _sync = new();
     private readonly AutoResetEvent _wake = new(false);
     private readonly Dictionary<FlowKey, FlowOwner> _flows = new();
@@ -16,6 +16,7 @@ public sealed class TrafficEngine : IDisposable
     private readonly Dictionary<string, Dictionary<int, AppUsage>> _processes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Dictionary<int, long>> _processSeen = new(StringComparer.OrdinalIgnoreCase);
     private readonly TrafficPacer _pacer = new();
+    private readonly PriorityTrafficScheduler _priorities = new();
     private sealed record ProcessRule(AppRule Settings, Process Process);
     private readonly Dictionary<string, Dictionary<int, ProcessRule>> _processRules = new(StringComparer.OrdinalIgnoreCase);
     private PriorityQueue<Packet, long> _pending = new();
@@ -23,6 +24,69 @@ public sealed class TrafficEngine : IDisposable
     private readonly RuleStore _rules;
 
     public TrafficEngine() : this(new RuleStore()) { }
+    /// <summary>Enables weighted application sharing for directions with a configured capacity.</summary>
+    public void SetPrioritiesEnabled(bool enabled)
+    {
+        lock (_sync)
+        {
+            _priorities.DrainTo(_pending);
+            _priorities.SetEnabled(enabled);
+            DistributePending();
+            _wake.Set();
+        }
+    }
+
+    /// <summary>Sets shared download/upload capacity in KB/s; zero bypasses priority scheduling for that direction.</summary>
+    public void SetPriorityCapacity(int downloadKBps, int uploadKBps)
+    {
+        if (downloadKBps < 0) throw new ArgumentOutOfRangeException(nameof(downloadKBps));
+        if (uploadKBps < 0) throw new ArgumentOutOfRangeException(nameof(uploadKBps));
+        lock (_sync)
+        {
+            _priorities.DrainTo(_pending);
+            _priorities.SetCapacity(downloadKBps, uploadKBps);
+            DistributePending();
+            _wake.Set();
+        }
+    }
+
+    /// <summary>Saves application priority: 0 low, 1 normal, 2 high (byte weights 1:2:4).</summary>
+    public void SetAppPriority(string path, int priority)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        if (priority is < 0 or > 2) throw new ArgumentOutOfRangeException(nameof(priority));
+        lock (_sync)
+        {
+            var current = _rules.Get(path);
+            var updated = WithLimits(current, current.DownloadKBps, current.UploadKBps);
+            updated.Priority = priority;
+            _rules.Set(updated);
+            _priorities.DrainTo(_pending);
+            DistributePending();
+            _wake.Set();
+        }
+    }
+
+    // Configuration changes are infrequent; packet admission uses EnqueuePending
+    // directly and never rebuilds unrelated queues on the capture hot path.
+    private void DistributePending()
+    {
+        if (_pending.Count == 0) return;
+        var retained = new PriorityQueue<Packet, long>();
+        while (_pending.TryDequeue(out var packet, out long due))
+        {
+            if (_priorities.IsEnabled(packet.Outbound)) _priorities.Enqueue(packet, _rules.Get(packet.Path).Priority);
+            else retained.Enqueue(packet, due);
+        }
+        _pending = retained;
+    }
+
+    private void EnqueuePending(Packet packet)
+    {
+        if (_priorities.IsEnabled(packet.Outbound)) _priorities.Enqueue(packet, _rules.Get(packet.Path).Priority);
+        else _pending.Enqueue(packet, packet.Due);
+    }
+
     internal TrafficEngine(RuleStore rules) => _rules = rules;
     internal string? RuleLoadError => _rules.LoadError;
     private nint _flowHandle;
@@ -42,6 +106,7 @@ public sealed class TrafficEngine : IDisposable
         {
             if (_blockerEnabled == enabled) return;
             _blockerEnabled = enabled;
+            _priorities.DrainTo(_pending);
             foreach (var path in _pending.UnorderedItems.Select(item => item.Element.Path).Distinct(StringComparer.OrdinalIgnoreCase).ToArray())
                 RetimePath(path);
         }
@@ -64,6 +129,7 @@ public sealed class TrafficEngine : IDisposable
             if (_limiterEnabled == enabled) return;
             _limiterEnabled = enabled;
             _pacer.Reset();
+            _priorities.DrainTo(_pending);
             foreach (var path in _pending.UnorderedItems.Select(item => item.Element.Path).Distinct(StringComparer.OrdinalIgnoreCase).ToArray())
                 RetimePath(path);
             _wake.Set();
@@ -171,7 +237,7 @@ public sealed class TrafficEngine : IDisposable
         DownloadRate = usage.DownloadRate, UploadRate = usage.UploadRate,
         DownloadLimit = rule.DownloadKBps, UploadLimit = rule.UploadKBps,
         DownloadLimitEnabled = rule.DownloadLimitEnabled, UploadLimitEnabled = rule.UploadLimitEnabled,
-        BlockDownload = rule.BlockDownload, BlockUpload = rule.BlockUpload
+        BlockDownload = rule.BlockDownload, BlockUpload = rule.BlockUpload, Priority = rule.Priority
     };
 
     // Called while holding _sync.
@@ -240,7 +306,7 @@ public sealed class TrafficEngine : IDisposable
     {
         Path = rule.Path, DownloadKBps = down, UploadKBps = up,
         DownloadLimitEnabled = rule.DownloadLimitEnabled, UploadLimitEnabled = rule.UploadLimitEnabled,
-        BlockDownload = rule.BlockDownload, BlockUpload = rule.BlockUpload
+        BlockDownload = rule.BlockDownload, BlockUpload = rule.BlockUpload, Priority = rule.Priority
     };
 
     internal void SetRule(AppRule settings, int pid = 0)
@@ -306,6 +372,7 @@ public sealed class TrafficEngine : IDisposable
 
     private void RetimePath(string path)
     {
+        _priorities.DrainTo(_pending);
         _pacer.ResetReservations(path);
         long now = Stopwatch.GetTimestamp();
         long immediate = now;
@@ -336,6 +403,7 @@ public sealed class TrafficEngine : IDisposable
             else retained.Enqueue(packet with { Due = due }, due);
         }
         _pending = retained;
+        DistributePending();
         _wake.Set();
     }
     private void RemovePending(Packet packet)
@@ -415,7 +483,7 @@ public sealed class TrafficEngine : IDisposable
                     int processLimit = GetProcessLimit(path, owner.ProcessId, outbound);
                     blocked = IsBlocked(path, owner.ProcessId, outbound);
                     if (blocked) Interlocked.Increment(ref _blockedPackets);
-                    if (!blocked && (limit > 0 || processLimit > 0) && !info.IsTcpControl)
+                    if (!blocked && (limit > 0 || processLimit > 0 || _priorities.IsEnabled(outbound)) && !info.IsTcpControl)
                     {
                         if (info.TcpSegment is { } segment && _queuedSegments.Contains(segment))
                         {
@@ -440,7 +508,7 @@ public sealed class TrafficEngine : IDisposable
                 {
                     byte[] queuedData = buffer.AsSpan(0, (int)length).ToArray();
                     byte[] queuedAddress = (byte[])address.Clone();
-                    _pending.Enqueue(new Packet(queuedData, queuedAddress, due, matchedPath!, matchedPid, outbound, info.TcpSegment), due);
+                    EnqueuePending(new Packet(queuedData, queuedAddress, due, matchedPath!, matchedPid, outbound, info.TcpSegment));
                     if (info.TcpSegment is { } segment) _queuedSegments.Add(segment);
                     _pendingBytes += length;
                     _wake.Set();
@@ -537,15 +605,22 @@ public sealed class TrafficEngine : IDisposable
             int waitMs = 1000;
             lock (_sync)
             {
+                if (!_running) _priorities.DrainTo(_pending);
                 if (!_running && _pending.Count == 0) break;
-                if (_pending.TryPeek(out _, out long due))
+                long now = Stopwatch.GetTimestamp();
+                bool hasPending = _pending.TryPeek(out _, out long due);
+                bool hasPriority = _priorities.TryPeek(now, Stopwatch.Frequency, out var prioritized, out long priorityDue);
+                bool usePriority = hasPriority && (!hasPending || priorityDue < due);
+                if (hasPending || hasPriority)
                 {
-                    long remaining = due - Stopwatch.GetTimestamp();
+                    if (usePriority) due = priorityDue;
+                    long remaining = due - now;
                     if (!_running || remaining <= 0)
                     {
-                        packet = _pending.Dequeue();
+                        packet = usePriority ? prioritized! : _pending.Dequeue();
                         if (IsBlocked(packet.Path, packet.ProcessId, packet.Outbound))
                         {
+                            if (usePriority) _priorities.Dequeue(packet, now, Stopwatch.Frequency, false);
                             RemovePending(packet);
                             Interlocked.Increment(ref _blockedPackets);
                             continue;
@@ -553,17 +628,20 @@ public sealed class TrafficEngine : IDisposable
                         var owner = new FlowOwner(packet.Path, packet.ProcessId);
                         int appLimit = GetAppLimit(packet.Path, packet.Outbound);
                         int processLimit = GetProcessLimit(packet.Path, packet.ProcessId, packet.Outbound);
-                        long now = Stopwatch.GetTimestamp();
                         long ready = _running ? _pacer.ReadyAt(owner, packet.Outbound, packet.Data.Length,
                             appLimit, processLimit, now, Stopwatch.Frequency) : now;
                         if (ready > now)
                         {
-                            _pending.Enqueue(packet with { Due = ready }, ready);
+                            if (usePriority) _priorities.Defer(packet, ready);
+                            else _pending.Enqueue(packet with { Due = ready }, ready);
                             packet = null;
-                            waitMs = 1;
+                            // Retry selection immediately: a throttled app must
+                            // not stall unrelated eligible priority backlogs.
+                            waitMs = usePriority ? 0 : 1;
                         }
                         else
                         {
+                            if (usePriority) _priorities.Dequeue(packet, now, Stopwatch.Frequency, true);
                             _pacer.MarkSent(owner, packet.Outbound, packet.Data.Length, appLimit, processLimit, now, Stopwatch.Frequency);
                             _pendingBytes -= packet.Data.Length;
                         }

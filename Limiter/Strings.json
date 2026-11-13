@@ -1,4 +1,16 @@
 {
+  "priorities": { "tr": "Öncelikler", "en": "Priorities" },
+  "priorities-toggle-hint": { "tr": "Uygulama önceliklerini aç veya kapat; kurallar korunur.", "en": "Enable or disable application priorities; rules are preserved." },
+  "priority": { "tr": "Uygulama önceliği", "en": "Application priority" },
+  "priority-low": { "tr": "Düşük", "en": "Low" },
+  "priority-normal": { "tr": "Normal", "en": "Normal" },
+  "priority-high": { "tr": "Yüksek", "en": "High" },
+  "priority-app-only": { "tr": "Öncelik uygulamanın tüm process'lerine uygulanır; seçim hemen kaydedilir.", "en": "Priority applies to all processes of the application; changes are saved immediately." },
+  "priority-capacity": { "tr": "Öncelik kapasitesi · KB/sn", "en": "Priority capacity · KB/s" },
+  "priority-capacity-download": { "tr": "İndirme kapasitesi · KB/sn", "en": "Download capacity · KB/s" },
+  "priority-capacity-upload": { "tr": "Yükleme kapasitesi · KB/sn", "en": "Upload capacity · KB/s" },
+  "priority-capacity-hint": { "tr": "Her yön için bağlantı kapasitesini girin ve Uygula'ya basın. 0 olduğunda o yönde önceliklendirme etkisizdir.", "en": "Enter the connection capacity for each direction and select Apply. A value of 0 disables prioritization for that direction." },
+  "priority-capacity-invalid": { "tr": "Kapasiteler için 0 veya daha büyük tam sayılar girin.", "en": "Enter whole numbers of 0 or greater for capacities." },
   "tray-open": { "tr": "Aç", "en": "Open" },
   "tray-exit": { "tr": "Çıkış", "en": "Exit" },
   "tray-monitoring-error": { "tr": "Limiter · Paket izleme durdu", "en": "Limiter · Packet monitoring stopped" },
@@ -129,10 +141,6 @@
   "select-an-application-from-the-list": {
     "tr": "Listeden bir uygulama seçin.",
     "en": "Select an application from the list."
-  },
-  "priorities-will-be-added-later": {
-    "tr": "Priorities sonraki aşamada eklenecek.",
-    "en": "Priorities will be added later."
   },
   "show-hide-processes": {
     "tr": "Process'leri göster / gizle",

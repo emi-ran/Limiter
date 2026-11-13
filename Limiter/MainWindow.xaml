@@ -225,7 +225,7 @@
 
                     <CheckBox x:Name="BlockerToggle" Content="Blocker" Style="{StaticResource EngineSwitch}" IsChecked="True" Click="BlockerToggle_Click" ToolTip="{local:Loc Key=enable-disable-all-application-and-pid-blocks-rules-are-preserved}"/>
                     <CheckBox x:Name="LimiterToggle" Content="Limiter" Style="{StaticResource EngineSwitch}" IsChecked="True" Click="LimiterToggle_Click" ToolTip="{local:Loc Key=enable-disable-all-application-and-pid-limits-saved-rules-are-preserve}"/>
-                    <CheckBox Content="Priorities" Tag="Upcoming" Style="{StaticResource EngineSwitch}" IsEnabled="False" IsChecked="False" ToolTip="{local:Loc Key=priorities-will-be-added-later}"/>
+                    <CheckBox x:Name="PrioritiesToggle" Content="{local:Loc Key=priorities}" Style="{StaticResource EngineSwitch}" Click="PrioritiesToggle_Click" ToolTip="{local:Loc Key=priorities-toggle-hint}"/>
                 </StackPanel>
                 <Grid Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">
                     <TextBox x:Name="SearchBox" Height="34" Style="{StaticResource LimitInput}" Padding="30,7,8,7" TextChanged="SearchBox_TextChanged" ToolTip="{local:Loc Key=search-by-application-name-or-file-path}"/>
@@ -354,6 +354,15 @@
                                 <TextBlock Text="{local:Loc Key=0-unlimited-minimum-16-kb-s}" Foreground="#8D9BAD" FontSize="10" Margin="0,12,0,0"/>
                             </StackPanel>
                         </Border>
+                        <Border Style="{StaticResource RuleCard}">
+                            <StackPanel>
+                                <TextBlock Text="{local:Loc Key=priority}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <ComboBox x:Name="PriorityChoice" Height="36" SelectionChanged="PriorityChoice_SelectionChanged" ToolTip="{local:Loc Key=priority-app-only}">
+                                    <ComboBoxItem Content="{local:Loc Key=priority-low}"/><ComboBoxItem Content="{local:Loc Key=priority-normal}"/><ComboBoxItem Content="{local:Loc Key=priority-high}"/>
+                                </ComboBox>
+                                <TextBlock Text="{local:Loc Key=priority-app-only}" Foreground="#8D9BAD" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </Border>
                         <TextBlock Text="{local:Loc Key=switches-apply-immediately-click-apply-to-save-speed-values}" Foreground="#8D9BAD" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,12"/>
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -372,7 +381,7 @@
             <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="190"/><ColumnDefinition Width="24"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                 <StackPanel><TextBlock Text="{local:Loc Key=settings}" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,20"/><Border Background="#234756" CornerRadius="5" Padding="12"><TextBlock Text="{local:Loc Key=general}" Foreground="#8ADDF9"/></Border></StackPanel>
-                <StackPanel Grid.Column="2" MaxWidth="620" HorizontalAlignment="Left">
+                <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel MaxWidth="620" HorizontalAlignment="Left">
                     <TextBlock Text="{local:Loc Key=preferences}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,20"/>
                     <Border Style="{StaticResource RuleCard}"><StackPanel>
                         <TextBlock Text="{local:Loc Key=language}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,12"/>
@@ -386,10 +395,18 @@
                         <CheckBox x:Name="StartWithWindows" Content="{local:Loc Key=start-with-windows}" Click="Startup_Click"/>
                         <TextBlock Text="{local:Loc Key=starts-elevated-when-you-sign-in-re-enable-this-option-if-you-move-the}" Foreground="#8D9BAD" TextWrapping="Wrap" Margin="0,10,0,0"/>
                     </StackPanel></Border>
+                    <Border Style="{StaticResource RuleCard}"><StackPanel>
+                        <TextBlock Text="{local:Loc Key=priority-capacity}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <StackPanel><TextBlock Text="{local:Loc Key=download}" Margin="0,0,0,5"/><TextBox x:Name="PriorityDownloadBox" Style="{StaticResource LimitInput}" ToolTip="{local:Loc Key=priority-capacity-download}"/></StackPanel>
+                            <StackPanel Grid.Column="2"><TextBlock Text="{local:Loc Key=upload}" Margin="0,0,0,5"/><TextBox x:Name="PriorityUploadBox" Style="{StaticResource LimitInput}" ToolTip="{local:Loc Key=priority-capacity-upload}"/></StackPanel>
+                        </Grid>
+                        <TextBlock Text="{local:Loc Key=priority-capacity-hint}" Foreground="#8D9BAD" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                    </StackPanel></Border>
                     <TextBlock Text="{local:Loc Key=language-changes-take-effect-immediately}" Foreground="#8D9BAD" Margin="0,4,0,16"/>
                     <Button Content="{local:Loc Key=apply}" Click="ApplySettings_Click" HorizontalAlignment="Left" MinWidth="150" Background="#258FB9"/>
                     <TextBlock x:Name="SettingsMessage" TextWrapping="Wrap" Foreground="#8CCB78" Margin="0,14,0,0"/>
-                </StackPanel>
+                </StackPanel></ScrollViewer>
             </Grid>
         </Border>
         </Grid>

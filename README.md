@@ -42,8 +42,9 @@ are refreshed on first launch; registration failures appear in Settings.
 - **Applications and PIDs:** Processes sharing an executable path are grouped. Expand a row to see individual processes. Application limits apply to combined traffic; PID limits apply to one process. Both can apply together.
 - **Speed limits:** Download and upload limits are independent. Direction switches take effect immediately without clearing the saved value; new values are saved with **Apply**.
 - **Blocker:** Block download and upload independently. Blocking takes precedence over limits and removes affected queued packets. Application blocking also applies to its child PID rows.
-- **Global switches:** Limiter and Blocker pause their respective rules while monitoring continues and saved rules are retained. Both switches reset to enabled when Limiter starts. **Priorities** is not available yet.
+- **Global switches:** Limiter, Blocker and Priorities pause their respective rules while monitoring continues and saved rules are retained. Limiter and Blocker reset to enabled at startup; the Priorities setting persists.
 - **Rule list:** View saved rules. **Remove limits** clears speed limits only; use the direction switches to remove blocks.
+- **Priority:** Select low, normal or high per application. Set directional link capacity in KB/s in Settings; `0` disables prioritization for that direction. Simultaneously queued applications share capacity at approximately 1:2:4 weights. Only matched traffic is managed; TCP control packets bypass scheduling. Download packets are delayed after traversing the link, so download priority and bandwidth cannot be guaranteed; UDP packets may be lost.
 
 Application rules are stored in `%LOCALAPPDATA%\Limiter\rules.json`. PID rules are not persisted and expire when the process or Limiter exits. Only processes with matched connections appear; session totals for exited processes are retained.
 

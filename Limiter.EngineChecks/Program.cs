@@ -16,6 +16,27 @@ static void Require(bool condition, string message)
     if (!condition) throw new Exception(message);
 }
 
+// Continuously backlogged applications must receive byte-weighted shares without starvation.
+var scheduler = new PriorityTrafficScheduler();
+scheduler.SetCapacity(1000, 1000);
+scheduler.SetEnabled(true);
+foreach (var (path, priority) in new[] { ("low", 0), ("normal", 1), ("high", 2) })
+    for (int i = 0; i < 1500; i++)
+        scheduler.Enqueue(new TrafficEngine.Packet(new byte[1000], [], 0, path, 1, true, null), priority);
+var shares = new Dictionary<string, int> { ["low"] = 0, ["normal"] = 0, ["high"] = 0 };
+long simulatedNow = 0;
+for (int i = 0; i < 700; i++)
+{
+    Require(scheduler.TryPeek(simulatedNow, 1_000_000, out var next, out long due), "Priority queue unexpectedly empty.");
+    simulatedNow = Math.Max(simulatedNow, due);
+    Require(scheduler.TryPeek(simulatedNow, 1_000_000, out next, out due), "Priority queue unexpectedly empty at send time.");
+    shares[next!.Path]++;
+    scheduler.Dequeue(next, simulatedNow, 1_000_000, true);
+}
+Require(shares["low"] is >= 95 and <= 105 && shares["normal"] is >= 195 and <= 205 && shares["high"] is >= 395 and <= 405,
+    $"Unexpected priority shares: low={shares["low"]}, normal={shares["normal"]}, high={shares["high"]}");
+Console.WriteLine("Priority weighted sharing and low-priority progress: OK");
+
 static byte[] TcpPacket(bool inbound, int payloadLength)
 {
     var packet = new byte[40 + payloadLength];
