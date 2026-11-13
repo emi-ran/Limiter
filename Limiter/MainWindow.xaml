@@ -1,421 +1,706 @@
 <Window x:Class="Limiter.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Limiter"
-        Title="Limiter 0.14.2" Icon="Assets/Limiter.ico" Height="820" Width="1320" MinWidth="1100" MinHeight="650" Background="#222222" Foreground="#E6E8EB" FontFamily="Segoe UI" FontSize="12" UseLayoutRounding="True">
+        Title="Limiter 0.15.0" Icon="Assets/Limiter.ico" Height="820" Width="1320" MinWidth="1160" MinHeight="680"
+        Background="#14181D" Foreground="#E8EDF3" FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="12.5"
+        UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
     <Window.Resources>
-        <Style TargetType="TextBlock"><Setter Property="Foreground" Value="#E6E8EB"/></Style>
+        <SolidColorBrush x:Key="Bg" Color="#14181D"/>
+        <SolidColorBrush x:Key="Surface" Color="#191E24"/>
+        <SolidColorBrush x:Key="SurfaceRaised" Color="#1F252C"/>
+        <SolidColorBrush x:Key="CardBg" Color="#1B2128"/>
+        <SolidColorBrush x:Key="Line" Color="#2A323B"/>
+        <SolidColorBrush x:Key="LineSoft" Color="#232A32"/>
+        <SolidColorBrush x:Key="Text" Color="#E8EDF3"/>
+        <SolidColorBrush x:Key="Muted" Color="#93A0AE"/>
+        <SolidColorBrush x:Key="Faint" Color="#6C7887"/>
+        <SolidColorBrush x:Key="Accent" Color="#3E9BD1"/>
+        <SolidColorBrush x:Key="AccentText" Color="#7BCBEC"/>
+        <SolidColorBrush x:Key="AccentSoft" Color="#1B3543"/>
+        <SolidColorBrush x:Key="Down" Color="#7CC99B"/>
+        <SolidColorBrush x:Key="Up" Color="#8AA9E8"/>
+        <SolidColorBrush x:Key="Danger" Color="#E0737F"/>
+        <SolidColorBrush x:Key="DangerSoft" Color="#3A2429"/>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Text}"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+            <Setter Property="Typography.NumeralAlignment" Value="Tabular"/>
+        </Style>
+
+        <Style x:Key="Caption" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Faint}"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <Style x:Key="CardTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
         <Style TargetType="Button">
-            <Setter Property="Background" Value="#168BD2"/><Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource SurfaceRaised}"/>
+            <Setter Property="Foreground" Value="{StaticResource Text}"/>
             <Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="14,9"/><Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
-                <Border x:Name="Surface" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                <Border x:Name="Surface" Background="{TemplateBinding Background}" CornerRadius="7" Padding="{TemplateBinding Padding}">
                     <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <ControlTemplate.Triggers>
-                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Opacity" Value="0.85"/></Trigger>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Opacity" Value="0.86"/></Trigger>
+                    <Trigger Property="IsPressed" Value="True"><Setter TargetName="Surface" Property="Opacity" Value="0.72"/></Trigger>
+                    <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="{StaticResource AccentText}"/><Setter TargetName="Surface" Property="BorderThickness" Value="1"/></Trigger>
                     <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Surface" Property="Opacity" Value="0.4"/></Trigger>
                 </ControlTemplate.Triggers>
             </ControlTemplate></Setter.Value></Setter>
         </Style>
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="{StaticResource Accent}"/><Setter Property="Foreground" Value="#F5FBFF"/>
+            <Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Padding" Value="16,10"/>
+        </Style>
+        <Style x:Key="GhostButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+                <Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="7" Padding="{TemplateBinding Padding}">
+                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Background" Value="{StaticResource SurfaceRaised}"/><Setter Property="Foreground" Value="{StaticResource Text}"/></Trigger>
+                    <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Surface" Property="Opacity" Value="0.4"/></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+        <Style x:Key="ChevronButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="Padding" Value="0"/><Setter Property="Width" Value="18"/><Setter Property="Height" Value="18"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+                <Border x:Name="Surface" Background="{TemplateBinding Background}" CornerRadius="4">
+                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Background" Value="{StaticResource SurfaceRaised}"/><Setter Property="Foreground" Value="{StaticResource Text}"/></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+
         <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="#DFE5ED"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="Padding" Value="0,5"/>
+            <Setter Property="Foreground" Value="{StaticResource Text}"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="Padding" Value="0,6"/>
             <Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox">
-                <Border x:Name="SwitchSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                <Border x:Name="SwitchSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="7" Padding="{TemplateBinding Padding}">
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True" Margin="0,0,10,0"/>
-                        <TextBlock x:Name="SwitchStatus" Grid.Column="1" Text="Off" Visibility="Collapsed" Foreground="#939EAC" FontSize="10" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <Border x:Name="SwitchTrack" Grid.Column="2" Width="30" Height="18" CornerRadius="9" Background="#444D59" VerticalAlignment="Center">
-                            <Ellipse x:Name="SwitchKnob" Width="12" Height="12" Fill="#CED5DF" HorizontalAlignment="Left" Margin="3,0"/>
+                        <TextBlock x:Name="SwitchStatus" Grid.Column="1" Text="{local:Loc Key=engine-state-off}" Visibility="Collapsed" Foreground="{StaticResource Faint}" FontSize="10" VerticalAlignment="Center" Margin="0,0,9,0"/>
+                        <Border x:Name="SwitchTrack" Grid.Column="2" Width="32" Height="18" CornerRadius="9" Background="#38424D" VerticalAlignment="Center">
+                            <Ellipse x:Name="SwitchKnob" Width="12" Height="12" Fill="#C6CFDA" HorizontalAlignment="Left" Margin="3,0"/>
                         </Border>
                     </Grid>
                 </Border>
                 <ControlTemplate.Triggers>
                     <Trigger Property="Tag" Value="Engine"><Setter TargetName="SwitchStatus" Property="Visibility" Value="Visible"/></Trigger>
                     <Trigger Property="IsChecked" Value="True">
-                        <Setter TargetName="SwitchTrack" Property="Background" Value="#258FB9"/>
+                        <Setter TargetName="SwitchTrack" Property="Background" Value="{StaticResource Accent}"/>
                         <Setter TargetName="SwitchKnob" Property="HorizontalAlignment" Value="Right"/><Setter TargetName="SwitchKnob" Property="Fill" Value="White"/>
-                        <Setter TargetName="SwitchStatus" Property="Text" Value="On"/><Setter TargetName="SwitchStatus" Property="Foreground" Value="#70CEF0"/>
+                        <Setter TargetName="SwitchStatus" Property="Text" Value="{local:Loc Key=engine-state-on}"/><Setter TargetName="SwitchStatus" Property="Foreground" Value="{StaticResource AccentText}"/>
                     </Trigger>
                     <MultiTrigger><MultiTrigger.Conditions><Condition Property="IsChecked" Value="True"/><Condition Property="Tag" Value="Block"/></MultiTrigger.Conditions>
-                        <Setter TargetName="SwitchTrack" Property="Background" Value="#C05A66"/>
+                        <Setter TargetName="SwitchTrack" Property="Background" Value="#C4626E"/>
                     </MultiTrigger>
-                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="SwitchSurface" Property="BorderBrush" Value="#657587"/></Trigger>
-                    <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SwitchSurface" Property="BorderBrush" Value="#70CEF0"/></Trigger>
-                    <Trigger Property="IsEnabled" Value="False">
-                        <Setter TargetName="SwitchSurface" Property="Opacity" Value="0.5"/>
-                    </Trigger>
-                    <MultiTrigger><MultiTrigger.Conditions><Condition Property="IsEnabled" Value="False"/><Condition Property="Tag" Value="Upcoming"/></MultiTrigger.Conditions>
-                        <Setter TargetName="SwitchStatus" Property="Text" Value="{local:Loc Key=soon}"/><Setter TargetName="SwitchStatus" Property="Visibility" Value="Visible"/>
-                        <Setter TargetName="SwitchTrack" Property="Visibility" Value="Collapsed"/>
-                    </MultiTrigger>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="SwitchSurface" Property="BorderBrush" Value="#4A5866"/></Trigger>
+                    <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SwitchSurface" Property="BorderBrush" Value="{StaticResource AccentText}"/></Trigger>
+                    <Trigger Property="IsEnabled" Value="False"><Setter TargetName="SwitchSurface" Property="Opacity" Value="0.5"/></Trigger>
                 </ControlTemplate.Triggers>
             </ControlTemplate></Setter.Value></Setter>
         </Style>
         <Style x:Key="EngineSwitch" TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
-            <Setter Property="Tag" Value="Engine"/><Setter Property="Padding" Value="11,7"/>
-            <Setter Property="Background" Value="#282E36"/><Setter Property="BorderBrush" Value="#3B424C"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Tag" Value="Engine"/><Setter Property="Padding" Value="11,6"/>
+            <Setter Property="Background" Value="{StaticResource SurfaceRaised}"/><Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+            <Setter Property="Margin" Value="0,0,8,0"/><Setter Property="FontSize" Value="11.5"/>
         </Style>
-        <Style x:Key="RuleCard" TargetType="Border">
-            <Setter Property="Background" Value="#272C33"/><Setter Property="BorderBrush" Value="#3B424C"/>
-            <Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="14,10"/><Setter Property="Margin" Value="0,0,0,10"/>
-        </Style>
+
         <Style x:Key="LimitInput" TargetType="TextBox">
-            <Setter Property="Background" Value="#1D2229"/><Setter Property="Foreground" Value="#EDF3FA"/>
-            <Setter Property="BorderBrush" Value="#48515E"/><Setter Property="Padding" Value="10,7"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="13"/>
+            <Setter Property="Background" Value="#11151A"/><Setter Property="Foreground" Value="{StaticResource Text}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Line}"/><Setter Property="Padding" Value="10,8"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="12.5"/><Setter Property="CaretBrush" Value="{StaticResource AccentText}"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TextBox">
-                <Border x:Name="InputSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="5">
-                    <ScrollViewer x:Name="PART_ContentHost" Margin="0"/>
+                <Border x:Name="InputSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="7" Padding="{TemplateBinding Padding}">
+                    <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
                 </Border>
                 <ControlTemplate.Triggers>
-                    <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="InputSurface" Property="BorderBrush" Value="#70CEF0"/></Trigger>
+                    <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="InputSurface" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="InputSurface" Property="BorderBrush" Value="#465463"/></Trigger>
                     <Trigger Property="IsEnabled" Value="False"><Setter TargetName="InputSurface" Property="Opacity" Value="0.5"/></Trigger>
                 </ControlTemplate.Triggers>
             </ControlTemplate></Setter.Value></Setter>
         </Style>
+        <Style TargetType="TextBox" BasedOn="{StaticResource LimitInput}"/>
+
         <Style TargetType="ComboBoxItem">
-            <Setter Property="Foreground" Value="#E6E8EB"/><Setter Property="Padding" Value="12,8"/>
-            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBoxItem"><Border x:Name="ItemSurface" Background="Transparent" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsHighlighted" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="#234756"/></Trigger><Trigger Property="IsSelected" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="#234756"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+            <Setter Property="Foreground" Value="{StaticResource Text}"/><Setter Property="Padding" Value="12,8"/><Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBoxItem"><Border x:Name="ItemSurface" Background="Transparent" Padding="{TemplateBinding Padding}" CornerRadius="5" Margin="3,1"><ContentPresenter/></Border><ControlTemplate.Triggers>
+                <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="{StaticResource SurfaceRaised}"/></Trigger>
+                <Trigger Property="IsSelected" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="{StaticResource AccentSoft}"/><Setter Property="Foreground" Value="{StaticResource AccentText}"/></Trigger>
+            </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
         </Style>
         <Style TargetType="ComboBox">
-            <Setter Property="Foreground" Value="#E6E8EB"/><Setter Property="Background" Value="#1D2229"/><Setter Property="BorderBrush" Value="#48515E"/><Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Foreground" Value="{StaticResource Text}"/><Setter Property="Background" Value="#11151A"/><Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/><Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox">
                 <Grid>
-                    <ToggleButton x:Name="DropButton" Focusable="False" IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
-                        <ToggleButton.Template><ControlTemplate TargetType="ToggleButton"><Border Background="#1D2229" BorderBrush="#48515E" BorderThickness="1" CornerRadius="5"><TextBlock Text="▾" Foreground="#A3B0C0" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0"/></Border></ControlTemplate></ToggleButton.Template>
+                    <ToggleButton x:Name="DropButton" Focusable="False" Cursor="Hand" IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                        <ToggleButton.Template><ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="DropSurface" Background="#11151A" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="7">
+                                <Path x:Name="Chevron" Data="M 0 0 L 4 4 L 8 0" Stroke="{StaticResource Muted}" StrokeThickness="1.6" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,13,0"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="DropSurface" Property="BorderBrush" Value="#465463"/></Trigger>
+                                <Trigger Property="IsChecked" Value="True"><Setter TargetName="DropSurface" Property="BorderBrush" Value="{StaticResource Accent}"/><Setter TargetName="Chevron" Property="Stroke" Value="{StaticResource AccentText}"/></Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate></ToggleButton.Template>
                     </ToggleButton>
                     <ContentPresenter Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" VerticalAlignment="Center" Margin="12,0,34,0" IsHitTestVisible="False"/>
-                    <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False">
-                        <Border Background="#272C33" BorderBrush="#48515E" BorderThickness="1" CornerRadius="5" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,4,0,0"><ScrollViewer MaxHeight="200"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer></Border>
+                    <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
+                        <Border Background="{StaticResource SurfaceRaised}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="7" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,5,0,0" Padding="0,3"><ScrollViewer MaxHeight="220"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer></Border>
                     </Popup>
                 </Grid>
             </ControlTemplate></Setter.Value></Setter>
         </Style>
-        <Style x:Key="ViewTab" TargetType="RadioButton">
-            <Setter Property="Foreground" Value="#E6E8EB"/><Setter Property="Padding" Value="14,8"/><Setter Property="Cursor" Value="Hand"/>
+
+        <Style x:Key="Segment" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/><Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="11.5"/><Setter Property="Padding" Value="0,7"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
-                <Border x:Name="Tab" Background="Transparent" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border>
+                <Border x:Name="SegmentSurface" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
                 <ControlTemplate.Triggers>
-                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Tab" Property="Background" Value="#454545"/></Trigger>
-                    <Trigger Property="IsChecked" Value="True"><Setter TargetName="Tab" Property="Background" Value="#234756"/><Setter Property="Foreground" Value="#8ADDF9"/></Trigger>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="SegmentSurface" Property="Background" Value="{StaticResource SurfaceRaised}"/><Setter Property="Foreground" Value="{StaticResource Text}"/></Trigger>
+                    <Trigger Property="IsChecked" Value="True">
+                        <Setter TargetName="SegmentSurface" Property="Background" Value="{StaticResource AccentSoft}"/>
+                        <Setter Property="Foreground" Value="{StaticResource AccentText}"/><Setter Property="FontWeight" Value="SemiBold"/>
+                    </Trigger>
+                    <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SegmentSurface" Property="BorderBrush" Value="{StaticResource Accent}"/><Setter TargetName="SegmentSurface" Property="BorderThickness" Value="1"/></Trigger>
+                    <Trigger Property="IsEnabled" Value="False"><Setter TargetName="SegmentSurface" Property="Opacity" Value="0.45"/></Trigger>
                 </ControlTemplate.Triggers>
             </ControlTemplate></Setter.Value></Setter>
         </Style>
-        <Style TargetType="TextBox"><Setter Property="Background" Value="#222222"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#44484F"/><Setter Property="Padding" Value="8"/></Style>
+
+        <Style x:Key="ViewTab" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/><Setter Property="FontSize" Value="12.5"/><Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="2,0"/><Setter Property="Margin" Value="0,0,26,0"/><Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
+                <Grid>
+                    <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,2"/>
+                    <Border x:Name="Underline" Height="2" CornerRadius="1" Background="{StaticResource Accent}" VerticalAlignment="Bottom" Opacity="0"/>
+                </Grid>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{StaticResource Text}"/><Setter TargetName="Underline" Property="Opacity" Value="0.28"/></Trigger>
+                    <Trigger Property="IsChecked" Value="True">
+                        <Setter Property="Foreground" Value="{StaticResource Text}"/><Setter Property="FontWeight" Value="SemiBold"/>
+                        <Setter TargetName="Underline" Property="Opacity" Value="1"/>
+                    </Trigger>
+                    <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Underline" Property="Opacity" Value="0.6"/></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBg}"/><Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+            <Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="11"/>
+            <Setter Property="Padding" Value="16,14"/><Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+        <Style x:Key="RuleCard" TargetType="Border" BasedOn="{StaticResource Card}"/>
+
         <Style x:Key="ScrollPageButton" TargetType="RepeatButton">
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent"/></ControlTemplate></Setter.Value></Setter>
         </Style>
         <Style x:Key="ScrollThumb" TargetType="Thumb">
-            <Setter Property="Background" Value="#50555E"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Thumb">
-                        <Border x:Name="Handle" Background="{TemplateBinding Background}" CornerRadius="4" Margin="3,2"/>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Handle" Property="Background" Value="#737B86"/></Trigger>
-                            <Trigger Property="IsDragging" Value="True"><Setter TargetName="Handle" Property="Background" Value="#73BAEA"/></Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Background" Value="#3C4550"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Thumb">
+                <Border x:Name="Handle" Background="{TemplateBinding Background}" CornerRadius="4" Margin="4,2"/>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Handle" Property="Background" Value="#56616E"/></Trigger>
+                    <Trigger Property="IsDragging" Value="True"><Setter TargetName="Handle" Property="Background" Value="{StaticResource Accent}"/></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
         </Style>
         <Style TargetType="ScrollBar">
-            <Setter Property="Background" Value="#222222"/>
-            <Setter Property="Width" Value="12"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ScrollBar">
-                        <Border Background="{TemplateBinding Background}">
-                            <Track x:Name="PART_Track" IsDirectionReversed="True" Orientation="{TemplateBinding Orientation}">
-                                <Track.DecreaseRepeatButton><RepeatButton x:Name="PageBefore" Style="{StaticResource ScrollPageButton}" Command="ScrollBar.PageUpCommand"/></Track.DecreaseRepeatButton>
-                                <Track.Thumb><Thumb x:Name="Handle" Style="{StaticResource ScrollThumb}" MinHeight="28"/></Track.Thumb>
-                                <Track.IncreaseRepeatButton><RepeatButton x:Name="PageAfter" Style="{StaticResource ScrollPageButton}" Command="ScrollBar.PageDownCommand"/></Track.IncreaseRepeatButton>
-                            </Track>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Handle" Property="Opacity" Value="0"/></Trigger>
-                            <Trigger Property="Orientation" Value="Horizontal">
-                                <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False"/>
-                                <Setter TargetName="Handle" Property="MinHeight" Value="0"/>
-                                <Setter TargetName="Handle" Property="MinWidth" Value="28"/>
-                                <Setter TargetName="PageBefore" Property="Command" Value="ScrollBar.PageLeftCommand"/>
-                                <Setter TargetName="PageAfter" Property="Command" Value="ScrollBar.PageRightCommand"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Background" Value="Transparent"/><Setter Property="Width" Value="11"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar">
+                <Border Background="{TemplateBinding Background}">
+                    <Track x:Name="PART_Track" IsDirectionReversed="True" Orientation="{TemplateBinding Orientation}">
+                        <Track.DecreaseRepeatButton><RepeatButton x:Name="PageBefore" Style="{StaticResource ScrollPageButton}" Command="ScrollBar.PageUpCommand"/></Track.DecreaseRepeatButton>
+                        <Track.Thumb><Thumb x:Name="Handle" Style="{StaticResource ScrollThumb}" MinHeight="28"/></Track.Thumb>
+                        <Track.IncreaseRepeatButton><RepeatButton x:Name="PageAfter" Style="{StaticResource ScrollPageButton}" Command="ScrollBar.PageDownCommand"/></Track.IncreaseRepeatButton>
+                    </Track>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Handle" Property="Opacity" Value="0"/></Trigger>
+                    <Trigger Property="Orientation" Value="Horizontal">
+                        <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False"/>
+                        <Setter TargetName="Handle" Property="MinHeight" Value="0"/><Setter TargetName="Handle" Property="MinWidth" Value="28"/>
+                        <Setter TargetName="PageBefore" Property="Command" Value="ScrollBar.PageLeftCommand"/>
+                        <Setter TargetName="PageAfter" Property="Command" Value="ScrollBar.PageRightCommand"/>
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
             <Style.Triggers>
-                <Trigger Property="Orientation" Value="Horizontal"><Setter Property="Width" Value="Auto"/><Setter Property="Height" Value="12"/></Trigger>
+                <Trigger Property="Orientation" Value="Horizontal"><Setter Property="Width" Value="Auto"/><Setter Property="Height" Value="11"/></Trigger>
             </Style.Triggers>
         </Style>
-        <Style TargetType="DataGrid"><Setter Property="Background" Value="#222222"/><Setter Property="Foreground" Value="#E6E8EB"/><Setter Property="RowBackground" Value="#222222"/><Setter Property="AlternatingRowBackground" Value="#222222"/><Setter Property="BorderThickness" Value="0"/><Setter Property="GridLinesVisibility" Value="None"/><Setter Property="HeadersVisibility" Value="Column"/><Setter Property="AutoGenerateColumns" Value="False"/><Setter Property="IsReadOnly" Value="True"/><Setter Property="SelectionMode" Value="Single"/></Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="{StaticResource Text}"/>
+            <Setter Property="RowBackground" Value="Transparent"/><Setter Property="AlternatingRowBackground" Value="#171C22"/>
+            <Setter Property="BorderThickness" Value="0"/><Setter Property="GridLinesVisibility" Value="None"/>
+            <Setter Property="HeadersVisibility" Value="Column"/><Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="IsReadOnly" Value="True"/><Setter Property="SelectionMode" Value="Single"/>
+            <Setter Property="RowHeaderWidth" Value="0"/><Setter Property="Background" Value="Transparent"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="Transparent"/><Setter Property="VerticalGridLinesBrush" Value="Transparent"/>
+        </Style>
         <Style x:Key="HeaderGrip" TargetType="Thumb">
             <Setter Property="Width" Value="5"/><Setter Property="Cursor" Value="SizeWE"/>
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Thumb"><Border Background="Transparent"/></ControlTemplate></Setter.Value></Setter>
         </Style>
         <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#303030"/><Setter Property="Foreground" Value="#DDE1E5"/>
-            <Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="FontSize" Value="11"/><Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="12,7"/><Setter Property="Cursor" Value="Hand"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="ToolTip" Value="{local:Loc Key=click-to-sort-click-again-to-reverse-the-direction}"/>
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="DataGridColumnHeader">
                 <Grid>
-                    <Border x:Name="HeaderSurface" Background="{TemplateBinding Background}" BorderBrush="#454545" BorderThickness="0,0,1,1" Padding="{TemplateBinding Padding}">
+                    <Border x:Name="HeaderSurface" Background="{TemplateBinding Background}" BorderBrush="{StaticResource LineSoft}" BorderThickness="0,0,0,1" Padding="{TemplateBinding Padding}">
                         <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="18"/></Grid.ColumnDefinitions>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <StackPanel VerticalAlignment="Center">
                                 <ContentPresenter HorizontalAlignment="Left"/>
-                                <TextBlock x:Name="HeaderHint" Text="{local:Loc Key=application-name}" Foreground="#8F969D" FontSize="10" FontWeight="Normal" Margin="0,3,0,0"/>
+                                <TextBlock x:Name="HeaderHint" Text="{local:Loc Key=application-name}" Foreground="{StaticResource Faint}" FontSize="9.5" FontWeight="Normal" Margin="0,2,0,0"/>
                             </StackPanel>
-                            <TextBlock x:Name="SortArrow" Grid.Column="1" Text="↕" Foreground="#777E85" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                            <TextBlock x:Name="SortArrow" Grid.Column="1" Text="↕" Foreground="#59636F" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="6,0,0,0"/>
                         </Grid>
                     </Border>
-                    <Border x:Name="ActiveLine" Height="2" Background="#00A8E8" VerticalAlignment="Bottom" Visibility="Collapsed"/>
                     <Thumb x:Name="PART_LeftHeaderGripper" HorizontalAlignment="Left" Style="{StaticResource HeaderGrip}"/>
                     <Thumb x:Name="PART_RightHeaderGripper" HorizontalAlignment="Right" Style="{StaticResource HeaderGrip}"/>
                 </Grid>
                 <ControlTemplate.Triggers>
                     <Trigger Property="Content" Value="{x:Null}"><Setter TargetName="HeaderHint" Property="Visibility" Value="Collapsed"/><Setter TargetName="SortArrow" Property="Visibility" Value="Collapsed"/></Trigger>
-                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="HeaderSurface" Property="Background" Value="#3B3B3B"/></Trigger>
-                    <DataTrigger Binding="{Binding Column.SortMemberPath, RelativeSource={RelativeSource Self}}" Value="DownloadRate"><Setter TargetName="HeaderHint" Property="Text" Value="{local:Loc Key=3-s-s}"/></DataTrigger>
-                    <DataTrigger Binding="{Binding Column.SortMemberPath, RelativeSource={RelativeSource Self}}" Value="UploadRate"><Setter TargetName="HeaderHint" Property="Text" Value="{local:Loc Key=3-s-s}"/></DataTrigger>
-                    <DataTrigger Binding="{Binding Column.SortMemberPath, RelativeSource={RelativeSource Self}}" Value="TotalBytes"><Setter TargetName="HeaderHint" Property="Text" Value="{local:Loc Key=session-traffic}"/></DataTrigger>
-                    <DataTrigger Binding="{Binding Column.SortMemberPath, RelativeSource={RelativeSource Self}}" Value="DownloadLimit"><Setter TargetName="HeaderHint" Property="Text" Value="{local:Loc Key=by-download-limit}"/></DataTrigger>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="HeaderSurface" Property="Background" Value="#1B2128"/><Setter Property="Foreground" Value="{StaticResource Text}"/></Trigger>
+                    <DataTrigger Binding="{Binding Column.SortMemberPath, RelativeSource={RelativeSource Self}}" Value="DownloadRate"><Setter TargetName="HeaderHint" Property="Text" Value="{local:Loc Key=header-average}"/></DataTrigger>
+                    <DataTrigger Binding="{Binding Column.SortMemberPath, RelativeSource={RelativeSource Self}}" Value="UploadRate"><Setter TargetName="HeaderHint" Property="Text" Value="{local:Loc Key=header-average}"/></DataTrigger>
+                    <DataTrigger Binding="{Binding Column.SortMemberPath, RelativeSource={RelativeSource Self}}" Value="TotalBytes"><Setter TargetName="HeaderHint" Property="Text" Value="{local:Loc Key=header-session}"/></DataTrigger>
+                    <DataTrigger Binding="{Binding Column.SortMemberPath, RelativeSource={RelativeSource Self}}" Value="DownloadLimit"><Setter TargetName="HeaderHint" Property="Text" Value="{local:Loc Key=header-by-limit}"/></DataTrigger>
                     <Trigger Property="SortDirection" Value="Ascending">
-                        <Setter TargetName="SortArrow" Property="Text" Value="↑"/><Setter TargetName="SortArrow" Property="Foreground" Value="#56C9F5"/>
-                        <Setter TargetName="ActiveLine" Property="Visibility" Value="Visible"/><Setter TargetName="HeaderSurface" Property="Background" Value="#263A43"/>
-                        <Setter Property="Foreground" Value="#56C9F5"/>
+                        <Setter TargetName="SortArrow" Property="Text" Value="↑"/><Setter TargetName="SortArrow" Property="Foreground" Value="{StaticResource AccentText}"/>
+                        <Setter TargetName="HeaderHint" Property="Foreground" Value="{StaticResource AccentText}"/>
+                        <Setter Property="Foreground" Value="{StaticResource AccentText}"/>
                     </Trigger>
                     <Trigger Property="SortDirection" Value="Descending">
-                        <Setter TargetName="SortArrow" Property="Text" Value="↓"/><Setter TargetName="SortArrow" Property="Foreground" Value="#56C9F5"/>
-                        <Setter TargetName="ActiveLine" Property="Visibility" Value="Visible"/><Setter TargetName="HeaderSurface" Property="Background" Value="#263A43"/>
-                        <Setter Property="Foreground" Value="#56C9F5"/>
+                        <Setter TargetName="SortArrow" Property="Text" Value="↓"/><Setter TargetName="SortArrow" Property="Foreground" Value="{StaticResource AccentText}"/>
+                        <Setter TargetName="HeaderHint" Property="Foreground" Value="{StaticResource AccentText}"/>
+                        <Setter Property="Foreground" Value="{StaticResource AccentText}"/>
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+        <Style TargetType="DataGridRow">
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Foreground" Value="{StaticResource Text}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="DataGridRow">
+                <Grid SnapsToDevicePixels="True">
+                    <Border x:Name="RowSurface" Background="{TemplateBinding Background}" BorderBrush="{StaticResource LineSoft}" BorderThickness="0,0,0,1"/>
+                    <Border x:Name="HoverLayer" Background="#1E242B" Opacity="0"/>
+                    <Border x:Name="SelectionBar" Width="2" HorizontalAlignment="Left" Background="{StaticResource Accent}" Opacity="0"/>
+                    <DataGridCellsPresenter ItemsPanel="{TemplateBinding ItemsPanel}"/>
+                </Grid>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Trigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverLayer" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12"/></Storyboard></BeginStoryboard></Trigger.EnterActions>
+                        <Trigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverLayer" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.18"/></Storyboard></BeginStoryboard></Trigger.ExitActions>
+                    </Trigger>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter TargetName="RowSurface" Property="Background" Value="#1C2C36"/>
+                        <Setter TargetName="HoverLayer" Property="Background" Value="#243642"/>
+                        <Setter TargetName="SelectionBar" Property="Opacity" Value="1"/>
+                        <Setter Property="Foreground" Value="{StaticResource Text}"/>
                     </Trigger>
                 </ControlTemplate.Triggers>
             </ControlTemplate></Setter.Value></Setter>
         </Style>
         <Style TargetType="DataGridCell">
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#E6E8EB"/>
-            <Setter Property="Padding" Value="4,2"/><Setter Property="BorderThickness" Value="0"/>
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="#00A8E8"/><Setter Property="Foreground" Value="White"/></Trigger>
-            </Style.Triggers>
-        </Style>
-        <Style TargetType="DataGridRow">
-            <Setter Property="Height" Value="28"/>
-            <Setter Property="Foreground" Value="#E6E8EB"/>
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="#00A8E8"/><Setter Property="Foreground" Value="White"/></Trigger>
-            </Style.Triggers>
+            <Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="{StaticResource Text}"/>
+            <Setter Property="Padding" Value="12,0"/><Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="DataGridCell">
+                <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                    <ContentPresenter VerticalAlignment="Center"/>
+                </Border>
+            </ControlTemplate></Setter.Value></Setter>
         </Style>
     </Window.Resources>
-    <Grid Background="#222222">
-        <Grid.RowDefinitions><RowDefinition Height="62"/><RowDefinition Height="*"/><RowDefinition Height="34"/></Grid.RowDefinitions>
-        <Border Background="#20252C" BorderBrush="#3B424C" BorderThickness="0,0,0,1" Padding="18,0">
-            <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions>
-                <TextBlock x:Name="MachineName" Foreground="#BDC9D7" FontWeight="SemiBold" FontSize="12" MaxWidth="180" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,20,0"/>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
 
-                    <CheckBox x:Name="BlockerToggle" Content="Blocker" Style="{StaticResource EngineSwitch}" IsChecked="True" Click="BlockerToggle_Click" ToolTip="{local:Loc Key=enable-disable-all-application-and-pid-blocks-rules-are-preserved}"/>
-                    <CheckBox x:Name="LimiterToggle" Content="Limiter" Style="{StaticResource EngineSwitch}" IsChecked="True" Click="LimiterToggle_Click" ToolTip="{local:Loc Key=enable-disable-all-application-and-pid-limits-saved-rules-are-preserve}"/>
-                    <CheckBox x:Name="PrioritiesToggle" Content="{local:Loc Key=priorities}" Style="{StaticResource EngineSwitch}" Click="PrioritiesToggle_Click" ToolTip="{local:Loc Key=priorities-toggle-hint}"/>
+    <Grid Background="{StaticResource Bg}">
+        <Grid.RowDefinitions><RowDefinition Height="68"/><RowDefinition Height="*"/><RowDefinition Height="32"/></Grid.RowDefinitions>
+
+        <!-- Top bar: brand, navigation, search and engine switches -->
+        <Border Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="20,0">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,28,0">
+                    <Border Width="32" Height="32" CornerRadius="9" Background="#1B3543" BorderBrush="#2A5164" BorderThickness="1">
+                        <Image Source="Assets/Limiter.ico" Width="18" Height="18" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    </Border>
+                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Limiter" FontSize="14.5" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="MachineName" Foreground="{StaticResource Faint}" FontSize="10" Margin="0,1,0,0" MaxWidth="150" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
                 </StackPanel>
-                <Grid Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">
-                    <TextBox x:Name="SearchBox" Height="34" Style="{StaticResource LimitInput}" Padding="30,7,8,7" TextChanged="SearchBox_TextChanged" ToolTip="{local:Loc Key=search-by-application-name-or-file-path}"/>
-                    <TextBlock Text="⌕" FontSize="21" Margin="9,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="#91979F"/>
-                    <TextBlock Text="{local:Loc Key=search-applications}" Margin="31,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="#91979F">
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Stretch">
+                    <RadioButton x:Name="ActivityView" GroupName="View" IsChecked="True" Style="{StaticResource ViewTab}" Checked="View_Click" Content="{local:Loc Key=activity}"/>
+                    <RadioButton x:Name="RulesView" GroupName="View" Style="{StaticResource ViewTab}" Checked="View_Click" Content="{local:Loc Key=rule-list}" ToolTip="{local:Loc Key=show-only-rows-with-saved-rules}"/>
+                    <RadioButton x:Name="SettingsView" GroupName="View" Style="{StaticResource ViewTab}" Checked="View_Click" Content="{local:Loc Key=settings}"/>
+                </StackPanel>
+
+                <Grid Grid.Column="3" Width="250" VerticalAlignment="Center">
+                    <TextBox x:Name="SearchBox" Height="34" Padding="32,8,10,8" TextChanged="SearchBox_TextChanged" ToolTip="{local:Loc Key=search-by-application-name-or-file-path}"/>
+                    <Path Data="M 10.5 10.5 L 14 14 M 0 6.5 A 6.5 6.5 0 1 1 13 6.5 A 6.5 6.5 0 1 1 0 6.5" Stroke="{StaticResource Faint}" StrokeThickness="1.4" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0,0,0" IsHitTestVisible="False"/>
+                    <TextBlock Text="{local:Loc Key=search-applications}" Margin="33,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="{StaticResource Faint}" FontSize="11.5">
                         <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
                     </TextBlock>
                 </Grid>
+
+                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0,0,0">
+                    <CheckBox x:Name="BlockerToggle" Content="Blocker" Style="{StaticResource EngineSwitch}" IsChecked="True" Click="BlockerToggle_Click" ToolTip="{local:Loc Key=enable-disable-all-application-and-pid-blocks-rules-are-preserved}"/>
+                    <CheckBox x:Name="LimiterToggle" Content="Limiter" Style="{StaticResource EngineSwitch}" IsChecked="True" Click="LimiterToggle_Click" ToolTip="{local:Loc Key=enable-disable-all-application-and-pid-limits-saved-rules-are-preserve}"/>
+                    <CheckBox x:Name="PrioritiesToggle" Content="{local:Loc Key=priorities}" Style="{StaticResource EngineSwitch}" Margin="0" Click="PrioritiesToggle_Click" ToolTip="{local:Loc Key=priorities-toggle-hint}"/>
+                </StackPanel>
             </Grid>
         </Border>
+
         <Grid x:Name="Workspace" Grid.Row="1">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" MinWidth="600"/><ColumnDefinition Width="5"/><ColumnDefinition Width="370" MinWidth="300"/></Grid.ColumnDefinitions>
-            <Grid>
-                <Grid.RowDefinitions><RowDefinition Height="36"/><RowDefinition Height="46"/><RowDefinition Height="32"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                <Border Background="#292F37" BorderBrush="#3B424C" BorderThickness="0,0,0,1">
-                    <StackPanel Orientation="Horizontal">
-                        <RadioButton x:Name="ActivityView" Content="{local:Loc Key=activity}" GroupName="View" IsChecked="True" Style="{StaticResource ViewTab}" Checked="View_Click"/>
-                        <RadioButton x:Name="RulesView" Content="{local:Loc Key=rule-list}" GroupName="View" Style="{StaticResource ViewTab}" Checked="View_Click" ToolTip="{local:Loc Key=show-only-rows-with-saved-rules}"/>
-                    <RadioButton x:Name="SettingsView" Content="{local:Loc Key=settings}" GroupName="View" Style="{StaticResource ViewTab}" Checked="View_Click"/>
-                    </StackPanel>
-                </Border>
-                <Border x:Name="TrafficSummary" Grid.Row="1" BorderBrush="#454545" BorderThickness="0,0,0,1" Padding="12,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" MinWidth="560"/><ColumnDefinition Width="6"/><ColumnDefinition Width="382" MinWidth="320"/></Grid.ColumnDefinitions>
+
+            <Grid x:Name="TrafficArea">
+                <Grid.RowDefinitions><RowDefinition Height="82"/><RowDefinition Height="34"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+
+                <Border x:Name="TrafficSummary" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="20,0">
                     <Grid VerticalAlignment="Center">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <StackPanel><TextBlock Text="{local:Loc Key=computer-traffic}" FontWeight="SemiBold"/><TextBlock x:Name="AppCount" Text="{local:Loc Key=0-applications}" Foreground="#9298A1" FontSize="10"/></StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,20,0" VerticalAlignment="Center"><TextBlock Text="↓ " Foreground="#8CCB78"/><TextBlock x:Name="TotalDownload" Text="{local:Loc Key=0-kb-s}" Width="95"/></StackPanel>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"><TextBlock Text="↑ " Foreground="#73BAEA"/><TextBlock x:Name="TotalUpload" Text="{local:Loc Key=0-kb-s}" Width="95"/></StackPanel>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{local:Loc Key=computer-traffic}" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="AppCount" Text="{local:Loc Key=0-applications}" Foreground="{StaticResource Faint}" FontSize="11" Margin="0,3,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,30,0">
+                            <TextBlock Text="↓" Foreground="{StaticResource Down}" FontSize="13" VerticalAlignment="Center" Margin="0,0,9,0"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="TotalDownload" Text="{local:Loc Key=0-kb-s}" FontSize="16.5" FontWeight="SemiBold" Foreground="{StaticResource Down}" MinWidth="112"/>
+                                <TextBlock Text="{local:Loc Key=download}" Foreground="{StaticResource Faint}" FontSize="10" Margin="0,1,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="↑" Foreground="{StaticResource Up}" FontSize="13" VerticalAlignment="Center" Margin="0,0,9,0"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="TotalUpload" Text="{local:Loc Key=0-kb-s}" FontSize="16.5" FontWeight="SemiBold" Foreground="{StaticResource Up}" MinWidth="112"/>
+                                <TextBlock Text="{local:Loc Key=upload}" Foreground="{StaticResource Faint}" FontSize="10" Margin="0,1,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
                     </Grid>
                 </Border>
-                <Border x:Name="SortingPanel" Grid.Row="2" Background="#252525" Padding="12,0" BorderBrush="#3C3C3C" BorderThickness="0,0,0,1">
+
+                <Border x:Name="SortingPanel" Grid.Row="1" BorderBrush="{StaticResource LineSoft}" BorderThickness="0,0,0,1" Padding="20,0">
                     <DockPanel VerticalAlignment="Center">
-                        <TextBlock Text="{local:Loc Key=click-a-header-to-change}" Foreground="#858D94" FontSize="10" DockPanel.Dock="Right"/>
-                        <TextBlock x:Name="SortDescription" Text="{local:Loc Key=download-highest-first}" Foreground="#56C9F5" FontSize="11"/>
+                        <TextBlock Text="{local:Loc Key=click-a-header-to-change}" Foreground="{StaticResource Faint}" FontSize="10" DockPanel.Dock="Right"/>
+                        <TextBlock x:Name="SortDescription" Text="{local:Loc Key=download-highest-first}" Foreground="{StaticResource AccentText}" FontSize="11"/>
                     </DockPanel>
                 </Border>
-        <DataGrid x:Name="AppsGrid" Grid.Row="3" SelectionChanged="AppsGrid_SelectionChanged" Sorting="AppsGrid_Sorting" AlternationCount="2" ScrollViewer.VerticalScrollBarVisibility="Visible" SelectionUnit="FullRow" CanUserResizeRows="False" CanUserReorderColumns="False" ColumnHeaderHeight="56">
-            <DataGrid.Resources>
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#00A8E8"/>
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#00A8E8"/>
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="White"/>
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="White"/>
-            </DataGrid.Resources>
-            <DataGrid.Columns>
-                <DataGridTemplateColumn Header="{local:Loc Key=application}" SortMemberPath="Name" CanUserSort="True" Width="2.3*" MinWidth="180">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Grid Margin="6,0" VerticalAlignment="Center">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="18"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                <Border Margin="{Binding Indent}"/>
-                                <Button Grid.Column="1" Content="{Binding ExpandGlyph}" Click="Expand_Click" Padding="0" Background="Transparent" Foreground="#B8BEC6" ToolTip="{local:Loc Key=show-hide-processes}" Focusable="False">
-                                    <Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Style.Triggers><DataTrigger Binding="{Binding CanExpand}" Value="False"><Setter Property="Visibility" Value="Hidden"/></DataTrigger></Style.Triggers></Style></Button.Style>
-                                </Button>
-                                <Image Grid.Column="2" Source="{Binding Icon}" Width="16" Height="16" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                <TextBlock Grid.Column="3" Text="{Binding Name}" Margin="8,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Path}"/>
-                            </Grid>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTextColumn Header="{local:Loc Key=download}" Binding="{Binding DownloadText}" SortMemberPath="DownloadRate" Width="*" MinWidth="125"/>
-                <DataGridTextColumn Header="{local:Loc Key=upload}" Binding="{Binding UploadText}" SortMemberPath="UploadRate" Width="*" MinWidth="125"/>
-                <DataGridTextColumn Header="{local:Loc Key=total}" Binding="{Binding TotalText}" SortMemberPath="TotalBytes" Width="0.8*" MinWidth="110"/>
-                <DataGridTextColumn Header="{local:Loc Key=rules}" Binding="{Binding LimitText}" SortMemberPath="DownloadLimit" Width="1.5*" MinWidth="155">
-                    <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="TextTrimming" Value="CharacterEllipsis"/><Setter Property="ToolTip" Value="{Binding LimitText}"/></Style></DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+
+                <Grid Grid.Row="2">
+                    <DataGrid x:Name="AppsGrid" SelectionChanged="AppsGrid_SelectionChanged" Sorting="AppsGrid_Sorting" AlternationCount="2"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionUnit="FullRow" CanUserResizeRows="False" CanUserReorderColumns="False"
+                              ColumnHeaderHeight="44" RowHeight="38" Margin="0,0,0,0">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="{local:Loc Key=application}" SortMemberPath="Name" CanUserSort="True" Width="2.2*" MinWidth="180">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,0" VerticalAlignment="Center">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="18"/><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                            <Border Margin="{Binding Indent}"/>
+                                            <Button Grid.Column="1" Content="{Binding ExpandGlyph}" Click="Expand_Click" FontSize="10" ToolTip="{local:Loc Key=show-hide-processes}" Focusable="False">
+                                                <Button.Style><Style TargetType="Button" BasedOn="{StaticResource ChevronButton}"><Style.Triggers><DataTrigger Binding="{Binding CanExpand}" Value="False"><Setter Property="Visibility" Value="Hidden"/></DataTrigger></Style.Triggers></Style></Button.Style>
+                                            </Button>
+                                            <Image Grid.Column="2" Source="{Binding Icon}" Width="16" Height="16" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding Name}" Margin="9,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Path}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="{local:Loc Key=download}" Binding="{Binding DownloadText}" SortMemberPath="DownloadRate" Width="*" MinWidth="118">
+                                <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="HorizontalAlignment" Value="Right"/><Setter Property="Foreground" Value="{StaticResource Down}"/></Style></DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="{local:Loc Key=upload}" Binding="{Binding UploadText}" SortMemberPath="UploadRate" Width="*" MinWidth="118">
+                                <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="HorizontalAlignment" Value="Right"/><Setter Property="Foreground" Value="{StaticResource Up}"/></Style></DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="{local:Loc Key=total}" Binding="{Binding TotalText}" SortMemberPath="TotalBytes" Width="0.85*" MinWidth="100">
+                                <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="HorizontalAlignment" Value="Right"/><Setter Property="Foreground" Value="{StaticResource Muted}"/></Style></DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTemplateColumn Header="{local:Loc Key=rules}" SortMemberPath="DownloadLimit" Width="2.1*" MinWidth="240">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <ItemsControl x:Name="Chips" ItemsSource="{Binding RuleChips}" ToolTip="{Binding LimitText}" VerticalAlignment="Center">
+                                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border x:Name="Chip" Background="#232B34" CornerRadius="5" Padding="7,2" Margin="0,0,5,0" VerticalAlignment="Center">
+                                                            <TextBlock x:Name="ChipText" Text="{Binding Text}" FontSize="10.5" Foreground="{StaticResource Muted}"/>
+                                                        </Border>
+                                                        <DataTemplate.Triggers>
+                                                            <DataTrigger Binding="{Binding Kind}" Value="Block">
+                                                                <Setter TargetName="Chip" Property="Background" Value="{StaticResource DangerSoft}"/>
+                                                                <Setter TargetName="ChipText" Property="Foreground" Value="{StaticResource Danger}"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Kind}" Value="Limit">
+                                                                <Setter TargetName="Chip" Property="Background" Value="#1B2A34"/>
+                                                                <Setter TargetName="ChipText" Property="Foreground" Value="{StaticResource AccentText}"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Kind}" Value="Priority">
+                                                                <Setter TargetName="Chip" Property="Background" Value="#26314A"/>
+                                                                <Setter TargetName="ChipText" Property="Foreground" Value="#9FB6E8"/>
+                                                            </DataTrigger>
+                                                        </DataTemplate.Triggers>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Text="—" Foreground="{StaticResource Faint}" FontSize="11">
+                                                <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Items.Count, ElementName=Chips}" Value="0"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <TextBlock Text="{local:Loc Key=no-applications-match}" Foreground="{StaticResource Faint}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Items.Count, ElementName=AppsGrid}" Value="0"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                    </TextBlock>
+                </Grid>
             </Grid>
-        <GridSplitter x:Name="DetailsSplitter" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#454545" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"/>
-        <Grid x:Name="DetailsPanel" Grid.Column="2">
-            <Grid.RowDefinitions><RowDefinition Height="36"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-            <Border Background="#292F37" Padding="16,8"><TextBlock Text="{local:Loc Key=application-details}" FontSize="10" FontWeight="SemiBold" Foreground="#A3B0C0"/></Border>
-            <Border Grid.Row="1" Background="#20252C" Padding="16">
-                <ScrollViewer x:Name="DetailsScroll" FocusVisualStyle="{x:Null}" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel>
-                    <TextBlock Text="{local:Loc Key=selected-application}" Foreground="#8D9BAD" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Image Source="{Binding SelectedItem.Icon, ElementName=AppsGrid}" Width="20" Height="20" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality">
-                            <Image.Style><Style TargetType="Image"><Style.Triggers><DataTrigger Binding="{Binding SelectedItem, ElementName=AppsGrid}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Image.Style>
-                        </Image>
-                        <TextBlock x:Name="SelectedName" Grid.Column="1" Text="{local:Loc Key=select-an-application}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
-                    </Grid>
-                    <TextBlock x:Name="SelectedPath" Text="{local:Loc Key=select-an-application-from-the-list}" Foreground="#9298A1" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" Margin="0,7,0,16"/>
-                    <Border Background="#272C33" CornerRadius="6" Padding="12,8" Margin="0,0,0,14">
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions><RowDefinition Height="20"/><RowDefinition Height="20"/><RowDefinition Height="20"/></Grid.RowDefinitions>
-                            <TextBlock Text="{local:Loc Key=download-3}" Foreground="#8CCB78"/><TextBlock x:Name="SelectedDownload" Grid.Column="1" Text="—"/>
-                            <TextBlock Grid.Row="1" Text="{local:Loc Key=upload-3}" Foreground="#73BAEA"/><TextBlock x:Name="SelectedUpload" Grid.Row="1" Grid.Column="1" Text="—"/>
-                            <TextBlock Grid.Row="2" Text="{local:Loc Key=total-traffic}" Foreground="#9298A1"/><TextBlock x:Name="SelectedTotal" Grid.Row="2" Grid.Column="1" Text="—"/>
-                        </Grid>
+
+            <GridSplitter x:Name="DetailsSplitter" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" Cursor="SizeWE"/>
+
+            <Border x:Name="DetailsPanel" Grid.Column="2" Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}" BorderThickness="1,0,0,0">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="52"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <Border BorderBrush="{StaticResource LineSoft}" BorderThickness="0,0,0,1" Padding="18,0">
+                        <TextBlock Text="{local:Loc Key=application-details}" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource Faint}" VerticalAlignment="Center"/>
                     </Border>
-                    <TextBlock Text="{local:Loc Key=traffic-rules}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                    <TextBlock x:Name="SelectedRule" Text="—" Foreground="#73BAEA" TextWrapping="Wrap" Margin="0,0,0,8"/>
-                    <TextBlock x:Name="RuleRuntime" Foreground="#D9B97F" Height="32" LineHeight="16" LineStackingStrategy="BlockLineHeight" TextTrimming="CharacterEllipsis" FontSize="11" Margin="0,0,0,8" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
-                    <TextBlock x:Name="RuleScope" Text="{local:Loc Key=rule-scope-depends-on-the-selected-row}" Foreground="#9298A1" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10"/>
-                    <TextBlock x:Name="ParentRule" Text="" Foreground="#D9B97F" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8">
-                        <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers></Style></TextBlock.Style>
-                    </TextBlock>
-                    <StackPanel x:Name="RuleControls" IsEnabled="False">
-                        <Border Style="{StaticResource RuleCard}">
-                            <StackPanel>
-                                <DockPanel Margin="0,0,0,10">
-                                    <Border DockPanel.Dock="Right" Background="#392B32" CornerRadius="4" Padding="7,3"><TextBlock Text="{local:Loc Key=blocking}" Foreground="#DA929C" FontSize="9" FontWeight="SemiBold"/></Border>
-                                    <TextBlock Text="Blocker" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                </DockPanel>
-                                <CheckBox x:Name="BlockDownload" Tag="Block" Content="{local:Loc Key=download-2}" Click="RuleToggle_Click" ToolTip="{local:Loc Key=block-download-traffic-for-this-scope}"/>
-                                <Border Height="1" Background="#39414C" Margin="0,4"/>
-                                <CheckBox x:Name="BlockUpload" Tag="Block" Content="{local:Loc Key=upload-2}" Click="RuleToggle_Click" ToolTip="{local:Loc Key=block-upload-traffic-for-this-scope}"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource RuleCard}">
-                            <StackPanel>
-                                <DockPanel Margin="0,0,0,10">
-                                    <Border DockPanel.Dock="Right" Background="#243D49" CornerRadius="4" Padding="7,3"><TextBlock Text="{local:Loc Key=kb-s}" Foreground="#88CFE9" FontSize="10"/></Border>
-                                    <TextBlock Text="{local:Loc Key=speed-limit}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                </DockPanel>
+                    <ScrollViewer x:Name="DetailsScroll" Grid.Row="1" FocusVisualStyle="{x:Null}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="DetailsContent" Margin="18,18,18,24">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Image Source="{Binding SelectedItem.Icon, ElementName=AppsGrid}" Width="30" Height="30" Margin="0,0,11,0" VerticalAlignment="Top" RenderOptions.BitmapScalingMode="HighQuality">
+                                    <Image.Style><Style TargetType="Image"><Style.Triggers><DataTrigger Binding="{Binding SelectedItem, ElementName=AppsGrid}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Image.Style>
+                                </Image>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock x:Name="SelectedName" Text="{local:Loc Key=select-an-application}" FontSize="16.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                                    <TextBlock x:Name="SelectedPath" Text="{local:Loc Key=select-an-application-from-the-list}" Foreground="{StaticResource Faint}" FontSize="10.5" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Margin="0,16,0,18">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Border Background="#171C22" BorderBrush="{StaticResource LineSoft}" BorderThickness="1" CornerRadius="9" Padding="11,9">
+                                    <StackPanel>
+                                        <TextBlock Text="{local:Loc Key=download-3}" Foreground="{StaticResource Faint}" FontSize="9.5"/>
+                                        <TextBlock x:Name="SelectedDownload" Text="—" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource Down}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="2" Background="#171C22" BorderBrush="{StaticResource LineSoft}" BorderThickness="1" CornerRadius="9" Padding="11,9">
+                                    <StackPanel>
+                                        <TextBlock Text="{local:Loc Key=upload-3}" Foreground="{StaticResource Faint}" FontSize="9.5"/>
+                                        <TextBlock x:Name="SelectedUpload" Text="—" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource Up}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="4" Background="#171C22" BorderBrush="{StaticResource LineSoft}" BorderThickness="1" CornerRadius="9" Padding="11,9">
+                                    <StackPanel>
+                                        <TextBlock Text="{local:Loc Key=total-traffic}" Foreground="{StaticResource Faint}" FontSize="9.5"/>
+                                        <TextBlock x:Name="SelectedTotal" Text="—" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource Muted}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <TextBlock Text="{local:Loc Key=traffic-rules}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <TextBlock x:Name="SelectedRule" Text="—" Foreground="{StaticResource AccentText}" FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="RuleRuntime" Foreground="#D9B97F" LineHeight="16" LineStackingStrategy="BlockLineHeight" FontSize="10.5" TextWrapping="Wrap" Margin="0,0,0,6" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}">
+                                <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers></Style></TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock x:Name="RuleScope" Text="{local:Loc Key=rule-scope-depends-on-the-selected-row}" Foreground="{StaticResource Faint}" FontSize="10.5" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="ParentRule" Text="" Foreground="#D9B97F" FontSize="10.5" TextWrapping="Wrap" Margin="0,0,0,14">
+                                <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers></Style></TextBlock.Style>
+                            </TextBlock>
+
+                            <StackPanel x:Name="RuleControls" IsEnabled="False" Margin="0,10,0,0">
+                                <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><Trigger Property="IsEnabled" Value="False"><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers></Style></StackPanel.Style>
+                                <Border Style="{StaticResource RuleCard}">
+                                    <StackPanel>
+                                        <TextBlock Text="{local:Loc Key=blocking}" Style="{StaticResource CardTitle}" Margin="0,0,0,6"/>
+                                        <CheckBox x:Name="BlockDownload" Tag="Block" Content="{local:Loc Key=download-2}" Click="RuleToggle_Click" ToolTip="{local:Loc Key=block-download-traffic-for-this-scope}"/>
+                                        <Border Height="1" Background="{StaticResource LineSoft}" Margin="0,2"/>
+                                        <CheckBox x:Name="BlockUpload" Tag="Block" Content="{local:Loc Key=upload-2}" Click="RuleToggle_Click" ToolTip="{local:Loc Key=block-upload-traffic-for-this-scope}"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource RuleCard}">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,0,0,10">
+                                            <Border DockPanel.Dock="Right" Background="#1B2A34" CornerRadius="4" Padding="6,2"><TextBlock Text="{local:Loc Key=kb-s}" Foreground="{StaticResource AccentText}" FontSize="9.5"/></Border>
+                                            <TextBlock Text="{local:Loc Key=speed-limit}" Style="{StaticResource CardTitle}"/>
+                                        </DockPanel>
+                                        <Grid>
+                                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="104"/></Grid.ColumnDefinitions>
+                                            <CheckBox x:Name="DownloadEnabled" Content="{local:Loc Key=download-2}" IsChecked="True" Click="RuleToggle_Click" ToolTip="{local:Loc Key=enable-disable-the-limit-saved-values-are-preserved}"/>
+                                            <TextBox x:Name="DownloadBox" Grid.Column="2" Style="{StaticResource LimitInput}" Text="0" Padding="10,8" HorizontalContentAlignment="Right" ToolTip="{local:Loc Key=download-limit-kb-s}"/>
+                                            <CheckBox x:Name="UploadEnabled" Grid.Row="2" Content="{local:Loc Key=upload-2}" IsChecked="True" Click="RuleToggle_Click" ToolTip="{local:Loc Key=enable-disable-the-limit-saved-values-are-preserved}"/>
+                                            <TextBox x:Name="UploadBox" Grid.Row="2" Grid.Column="2" Style="{StaticResource LimitInput}" Text="0" Padding="10,8" HorizontalContentAlignment="Right" ToolTip="{local:Loc Key=upload-limit-kb-s}"/>
+                                        </Grid>
+                                        <TextBlock Text="{local:Loc Key=0-unlimited-minimum-16-kb-s}" Foreground="{StaticResource Faint}" FontSize="10" Margin="0,10,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource RuleCard}">
+                                    <StackPanel>
+                                        <TextBlock Text="{local:Loc Key=priority}" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
+                                        <Border Background="#11151A" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="8" Padding="3">
+                                            <UniformGrid x:Name="PriorityGroup" Columns="3">
+                                                <RadioButton x:Name="PriorityLow" GroupName="Priority" Tag="0" Content="{local:Loc Key=priority-low}" Style="{StaticResource Segment}" Click="Priority_Click"/>
+                                                <RadioButton x:Name="PriorityNormal" GroupName="Priority" Tag="1" Content="{local:Loc Key=priority-normal}" Style="{StaticResource Segment}" Click="Priority_Click"/>
+                                                <RadioButton x:Name="PriorityHigh" GroupName="Priority" Tag="2" Content="{local:Loc Key=priority-high}" Style="{StaticResource Segment}" Click="Priority_Click"/>
+                                            </UniformGrid>
+                                        </Border>
+                                        <TextBlock Text="{local:Loc Key=priority-app-only}" Foreground="{StaticResource Faint}" FontSize="10" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <TextBlock Text="{local:Loc Key=switches-apply-immediately-click-apply-to-save-speed-values}" Foreground="{StaticResource Faint}" FontSize="10" TextWrapping="Wrap" Margin="0,2,0,12"/>
                                 <Grid>
-                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="12"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="90"/></Grid.ColumnDefinitions>
-                                    <CheckBox x:Name="DownloadEnabled" Content="{local:Loc Key=download-2}" IsChecked="True" Click="RuleToggle_Click" ToolTip="{local:Loc Key=enable-disable-the-limit-saved-values-are-preserved}"/>
-                                    <TextBox x:Name="DownloadBox" Grid.Column="2" Style="{StaticResource LimitInput}" Text="0" ToolTip="{local:Loc Key=download-limit-kb-s}"/>
-                                    <CheckBox x:Name="UploadEnabled" Grid.Row="2" Content="{local:Loc Key=upload-2}" IsChecked="True" Click="RuleToggle_Click" ToolTip="{local:Loc Key=enable-disable-the-limit-saved-values-are-preserved}"/>
-                                    <TextBox x:Name="UploadBox" Grid.Row="2" Grid.Column="2" Style="{StaticResource LimitInput}" Text="0" ToolTip="{local:Loc Key=upload-limit-kb-s}"/>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <Button Content="{local:Loc Key=apply}" Click="Save_Click" Style="{StaticResource PrimaryButton}"/>
+                                    <Button Grid.Column="2" Content="{local:Loc Key=remove-limits}" Click="ClearLimits_Click" Style="{StaticResource GhostButton}" Padding="12,10"/>
                                 </Grid>
-                                <TextBlock Text="{local:Loc Key=0-unlimited-minimum-16-kb-s}" Foreground="#8D9BAD" FontSize="10" Margin="0,12,0,0"/>
                             </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource RuleCard}">
-                            <StackPanel>
-                                <TextBlock Text="{local:Loc Key=priority}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                                <ComboBox x:Name="PriorityChoice" Height="36" SelectionChanged="PriorityChoice_SelectionChanged" ToolTip="{local:Loc Key=priority-app-only}">
-                                    <ComboBoxItem Content="{local:Loc Key=priority-low}"/><ComboBoxItem Content="{local:Loc Key=priority-normal}"/><ComboBoxItem Content="{local:Loc Key=priority-high}"/>
-                                </ComboBox>
-                                <TextBlock Text="{local:Loc Key=priority-app-only}" Foreground="#8D9BAD" TextWrapping="Wrap" Margin="0,10,0,0"/>
-                            </StackPanel>
-                        </Border>
-                        <TextBlock Text="{local:Loc Key=switches-apply-immediately-click-apply-to-save-speed-values}" Foreground="#8D9BAD" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                            <TextBlock x:Name="RuleMessage" Foreground="{StaticResource Down}" FontSize="11" Margin="0,12,0,0" TextWrapping="Wrap">
+                                <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers></Style></TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <Border x:Name="SettingsPanel" Grid.ColumnSpan="3" Background="{StaticResource Bg}" Visibility="Collapsed">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="36,30,36,36">
+                    <StackPanel MaxWidth="1040" HorizontalAlignment="Left">
+                        <TextBlock Text="{local:Loc Key=settings}" FontSize="23" FontWeight="SemiBold"/>
+                        <TextBlock Text="{local:Loc Key=settings-subtitle}" Foreground="{StaticResource Muted}" FontSize="11.5" Margin="0,5,0,26"/>
+
                         <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <Button Content="{local:Loc Key=apply}" Click="Save_Click" Padding="14,10" Background="#258FB9"/>
-                            <Button Grid.Column="2" Content="{local:Loc Key=remove-limits}" Click="ClearLimits_Click" Background="#343C47" Padding="12,10"/>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+
+                            <StackPanel>
+                                <TextBlock Text="{local:Loc Key=general}" Style="{StaticResource SectionLabel}"/>
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Text="{local:Loc Key=language}" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
+                                        <ComboBox x:Name="LanguageChoice" Height="36" SelectedValuePath="Tag" HorizontalAlignment="Stretch">
+                                            <ComboBoxItem Tag="system" Content="{local:Loc Key=system-language}"/>
+                                            <ComboBoxItem Tag="tr" Content="Türkçe"/><ComboBoxItem Tag="en" Content="English"/>
+                                        </ComboBox>
+                                        <TextBlock Text="{local:Loc Key=english-is-used-when-the-system-language-is-not-turkish-or-english}" Style="{StaticResource Caption}" Margin="0,9,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <CheckBox x:Name="StartWithWindows" Content="{local:Loc Key=start-with-windows}" Click="Startup_Click" FontSize="12.5"/>
+                                        <TextBlock Text="{local:Loc Key=starts-elevated-when-you-sign-in-re-enable-this-option-if-you-move-the}" Style="{StaticResource Caption}" Margin="0,9,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="{local:Loc Key=priorities}" Style="{StaticResource SectionLabel}"/>
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Text="{local:Loc Key=priority-capacity}" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock Text="{local:Loc Key=download}" Foreground="{StaticResource Muted}" FontSize="10.5" Margin="0,0,0,5"/>
+                                                <Grid>
+                                                    <TextBox x:Name="PriorityDownloadBox" Style="{StaticResource LimitInput}" Padding="10,8,36,8" ToolTip="{local:Loc Key=priority-capacity-download}"/>
+                                                    <TextBlock Text="KB/s" Foreground="{StaticResource Faint}" FontSize="9.5" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,9,0" IsHitTestVisible="False"/>
+                                                </Grid>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="{local:Loc Key=upload}" Foreground="{StaticResource Muted}" FontSize="10.5" Margin="0,0,0,5"/>
+                                                <Grid>
+                                                    <TextBox x:Name="PriorityUploadBox" Style="{StaticResource LimitInput}" Padding="10,8,36,8" ToolTip="{local:Loc Key=priority-capacity-upload}"/>
+                                                    <TextBlock Text="KB/s" Foreground="{StaticResource Faint}" FontSize="9.5" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,9,0" IsHitTestVisible="False"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Grid>
+                                        <TextBlock Text="{local:Loc Key=priority-capacity-hint}" Style="{StaticResource Caption}" Margin="0,9,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource Card}" Background="#171C22">
+                                    <StackPanel>
+                                        <TextBlock Text="{local:Loc Key=priority-explainer-title}" Style="{StaticResource CardTitle}" Margin="0,0,0,7"/>
+                                        <TextBlock Text="{local:Loc Key=priority-explainer-body}" Style="{StaticResource Caption}"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
                         </Grid>
+
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,6,0,0">
+                            <Button Content="{local:Loc Key=apply}" Click="ApplySettings_Click" Style="{StaticResource PrimaryButton}" MinWidth="140"/>
+                            <TextBlock Text="{local:Loc Key=language-changes-take-effect-immediately}" Foreground="{StaticResource Faint}" FontSize="10.5" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                        </StackPanel>
+                        <TextBlock x:Name="SettingsMessage" TextWrapping="Wrap" Foreground="{StaticResource Down}" FontSize="11" Margin="0,14,0,0"/>
                     </StackPanel>
-                    <TextBlock x:Name="RuleMessage" Foreground="#8CCB78" Margin="0,10,0,0" TextWrapping="Wrap">
-                        <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers></Style></TextBlock.Style>
-                    </TextBlock>
-                </StackPanel>
                 </ScrollViewer>
             </Border>
         </Grid>
-        <Border x:Name="SettingsPanel" Grid.ColumnSpan="3" Margin="0,36,0,0" Background="#20252C" Visibility="Collapsed" Padding="28">
-            <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="190"/><ColumnDefinition Width="24"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                <StackPanel><TextBlock Text="{local:Loc Key=settings}" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,20"/><Border Background="#234756" CornerRadius="5" Padding="12"><TextBlock Text="{local:Loc Key=general}" Foreground="#8ADDF9"/></Border></StackPanel>
-                <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel MaxWidth="620" HorizontalAlignment="Left">
-                    <TextBlock Text="{local:Loc Key=preferences}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,20"/>
-                    <Border Style="{StaticResource RuleCard}"><StackPanel>
-                        <TextBlock Text="{local:Loc Key=language}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,12"/>
-                        <ComboBox x:Name="LanguageChoice" Height="36" SelectedValuePath="Tag" HorizontalAlignment="Stretch">
-                            <ComboBoxItem Tag="system" Content="{local:Loc Key=system-language}"/>
-                            <ComboBoxItem Tag="tr" Content="Türkçe"/><ComboBoxItem Tag="en" Content="English"/>
-                        </ComboBox>
-                        <TextBlock Text="{local:Loc Key=english-is-used-when-the-system-language-is-not-turkish-or-english}" Foreground="#8D9BAD" TextWrapping="Wrap" Margin="0,10,0,0"/>
-                    </StackPanel></Border>
-                    <Border Style="{StaticResource RuleCard}"><StackPanel>
-                        <CheckBox x:Name="StartWithWindows" Content="{local:Loc Key=start-with-windows}" Click="Startup_Click"/>
-                        <TextBlock Text="{local:Loc Key=starts-elevated-when-you-sign-in-re-enable-this-option-if-you-move-the}" Foreground="#8D9BAD" TextWrapping="Wrap" Margin="0,10,0,0"/>
-                    </StackPanel></Border>
-                    <Border Style="{StaticResource RuleCard}"><StackPanel>
-                        <TextBlock Text="{local:Loc Key=priority-capacity}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <StackPanel><TextBlock Text="{local:Loc Key=download}" Margin="0,0,0,5"/><TextBox x:Name="PriorityDownloadBox" Style="{StaticResource LimitInput}" ToolTip="{local:Loc Key=priority-capacity-download}"/></StackPanel>
-                            <StackPanel Grid.Column="2"><TextBlock Text="{local:Loc Key=upload}" Margin="0,0,0,5"/><TextBox x:Name="PriorityUploadBox" Style="{StaticResource LimitInput}" ToolTip="{local:Loc Key=priority-capacity-upload}"/></StackPanel>
-                        </Grid>
-                        <TextBlock Text="{local:Loc Key=priority-capacity-hint}" Foreground="#8D9BAD" TextWrapping="Wrap" Margin="0,10,0,0"/>
-                    </StackPanel></Border>
-                    <TextBlock Text="{local:Loc Key=language-changes-take-effect-immediately}" Foreground="#8D9BAD" Margin="0,4,0,16"/>
-                    <Button Content="{local:Loc Key=apply}" Click="ApplySettings_Click" HorizontalAlignment="Left" MinWidth="150" Background="#258FB9"/>
-                    <TextBlock x:Name="SettingsMessage" TextWrapping="Wrap" Foreground="#8CCB78" Margin="0,14,0,0"/>
-                </StackPanel></ScrollViewer>
+
+        <Border Grid.Row="2" Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="20,0">
+            <Grid VerticalAlignment="Center">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding Text, ElementName=StatusText}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                    <Ellipse Width="6" Height="6" Fill="{StaticResource Accent}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="StatusText" Text="" Foreground="{StaticResource Muted}" FontSize="10.5" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{local:Loc Key=3-s-average-kb-1024-bytes}" Foreground="{StaticResource Faint}" FontSize="10"/>
+                    <Border Width="1" Height="11" Background="{StaticResource Line}" Margin="12,0"/>
+                    <TextBlock x:Name="LimiterState" Text="Limiter On · Blocker On" Foreground="{StaticResource Muted}" FontSize="10.5"/>
+                </StackPanel>
             </Grid>
-        </Border>
-        </Grid>
-        <Border Grid.Row="2" Background="#292929" BorderBrush="#454545" BorderThickness="0,1,0,0" Padding="18,0">
-            <DockPanel VerticalAlignment="Center">
-                <TextBlock x:Name="LimiterState" Text="Limiter On · Blocker On" Foreground="#C4DF20" FontSize="11" DockPanel.Dock="Right" Margin="20,0,0,0"/>
-                <TextBlock Text="{local:Loc Key=3-s-average-kb-1024-bytes}" Foreground="#9298A1" FontSize="10" DockPanel.Dock="Right"/>
-                <TextBlock x:Name="StatusText" Text="{local:Loc Key=starting}" Foreground="#9298A1" FontSize="10" TextTrimming="CharacterEllipsis"/>
-            </DockPanel>
         </Border>
     </Grid>
 </Window>

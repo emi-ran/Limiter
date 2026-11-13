@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
 namespace Limiter;
@@ -41,6 +42,13 @@ public partial class MainWindow : Window
         _engine.SetPriorityCapacity(_settings.PriorityDownloadKBps, _settings.PriorityUploadKBps);
         _engine.SetPrioritiesEnabled(_settings.PrioritiesEnabled);
         if (settingsError is not null) SettingsMessage.Text = Localization.T("could-not-save-settings") + settingsError;
+        UpdateGlobalState();
+        if (SystemParameters.ClientAreaAnimation)
+        {
+            var textChanged = DependencyPropertyDescriptor.FromProperty(TextBlock.TextProperty, typeof(TextBlock));
+            textChanged?.AddValueChanged(RuleMessage, (_, _) => { if (RuleMessage.Text.Length > 0) FadeIn(RuleMessage, 150); });
+            textChanged?.AddValueChanged(SettingsMessage, (_, _) => { if (SettingsMessage.Text.Length > 0) FadeIn(SettingsMessage, 150); });
+        }
         UpdateSortDescription();
         MachineName.Text = Environment.MachineName.ToUpperInvariant();
         AppsGrid.ItemsSource = _rows;
@@ -61,12 +69,22 @@ public partial class MainWindow : Window
 
     internal bool HasRuleLoadError => _engine.RuleLoadError is { Length: > 0 };
 
+    private static void FadeIn(UIElement element, int milliseconds = 170)
+    {
+        element.Opacity = 1;
+        if (!SystemParameters.ClientAreaAnimation) return;
+        element.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(milliseconds))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            FillBehavior = FillBehavior.Stop
+        });
+    }
+
     private void UpdateStatusText()
     {
-        string status = _engine.Status;
-        if (_engine.RuleLoadError is { Length: > 0 } error)
-            status = Localization.T("rules-could-not-be-loaded") + error + " · " + status;
-        StatusText.Text = status;
+        StatusText.Text = _engine.RuleLoadError is { Length: > 0 } error
+            ? Localization.T("rules-could-not-be-loaded") + error
+            : _engine.MonitoringError != 0 ? _engine.Status : "";
     }
 
     internal bool StartMonitoring()
@@ -145,7 +163,8 @@ public partial class MainWindow : Window
 
     private void UpdateGlobalState()
     {
-        LimiterState.Text = $"Limiter {(_engine.LimiterEnabled ? "On" : "Off")} · Blocker {(_engine.BlockerEnabled ? "On" : "Off")}";
+        string State(bool enabled) => Localization.T(enabled ? "engine-state-on" : "engine-state-off");
+        LimiterState.Text = $"Limiter {State(_engine.LimiterEnabled)} · Blocker {State(_engine.BlockerEnabled)} · {Localization.T("priorities")} {State(PrioritiesToggle.IsChecked == true)}";
     }
 
     private void View_Click(object sender, RoutedEventArgs e)
@@ -158,6 +177,7 @@ public partial class MainWindow : Window
         DetailsPanel.Visibility = DetailsSplitter.Visibility = trafficVisibility;
         if (settings)
         {
+            FadeIn(SettingsPanel);
             try
             {
                 _startupEnabled = StartupRegistration.IsEnabled();
@@ -176,6 +196,7 @@ public partial class MainWindow : Window
         }
         _rulesOnly = ReferenceEquals(sender, RulesView);
         if (AppsGrid?.ItemsSource is null) return;
+        FadeIn(TrafficArea);
         CollectionViewSource.GetDefaultView(_rows).Refresh();
     }
 
@@ -358,7 +379,7 @@ public partial class MainWindow : Window
             ParentRule.Text = "";
             RuleRuntime.Text = "";
             RuleControls.IsEnabled = false;
-            PriorityChoice.IsEnabled = false;
+            PriorityGroup.IsEnabled = false;
             return;
         }
         RuleControls.IsEnabled = true;
@@ -366,29 +387,36 @@ public partial class MainWindow : Window
         SelectedPath.Text = row.Path;
         DownloadBox.Text = row.DownloadLimit.ToString();
         UploadBox.Text = row.UploadLimit.ToString();
-        _loadingPriority = true;
-        PriorityChoice.SelectedIndex = Math.Clamp(row.IsProcess ? row.Parent?.Priority ?? 1 : row.Priority, 0, 2);
-        PriorityChoice.IsEnabled = !row.IsProcess;
-        _loadingPriority = false;
+        SetPrioritySelection(row.IsProcess ? row.Parent?.Priority ?? 1 : row.Priority);
+        PriorityGroup.IsEnabled = !row.IsProcess;
         LoadRuleChecks(row);
         RuleMessage.Text = "";
         UpdateSelectedTraffic();
+        FadeIn(DetailsContent);
     }
 
-    private void PriorityChoice_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void SetPrioritySelection(int priority)
     {
-        if (_loadingPriority || AppsGrid?.SelectedItem is not AppRow { IsProcess: false } row || PriorityChoice.SelectedIndex < 0) return;
+        _loadingPriority = true;
+        PriorityLow.IsChecked = priority == 0;
+        PriorityNormal.IsChecked = priority == 1;
+        PriorityHigh.IsChecked = priority == 2;
+        _loadingPriority = false;
+    }
+
+    private void Priority_Click(object sender, RoutedEventArgs e)
+    {
+        if (_loadingPriority || AppsGrid?.SelectedItem is not AppRow { IsProcess: false } row ||
+            sender is not RadioButton { Tag: string tag } || !int.TryParse(tag, out int priority)) return;
         try
         {
-            _engine.SetAppPriority(row.Path, PriorityChoice.SelectedIndex);
+            _engine.SetAppPriority(row.Path, priority);
             RuleMessage.Text = Localization.T("rule-updated");
             RefreshRows();
         }
         catch (Exception ex)
         {
-            _loadingPriority = true;
-            PriorityChoice.SelectedIndex = Math.Clamp(row.Priority, 0, 2);
-            _loadingPriority = false;
+            SetPrioritySelection(row.Priority);
             RuleMessage.Text = Localization.T("could-not-save") + ex.Message;
         }
     }
@@ -456,6 +484,8 @@ public partial class MainWindow : Window
     }
 }
 
+public sealed record RuleChip(string Text, string Kind);
+
 public sealed class AppRow(AppUsage initialUsage, AppRow? parent = null) : INotifyPropertyChanged
 {
     private AppUsage usage = initialUsage;
@@ -498,6 +528,7 @@ public sealed class AppRow(AppUsage initialUsage, AppRow? parent = null) : INoti
         string oldName = Name, oldDownload = DownloadText, oldUpload = UploadText;
         string oldTotal = TotalText, oldLimit = LimitText, oldParentRule = ParentRuleText;
         usage = current;
+        RefreshChips();
         if (oldName != Name) Notify(nameof(Name));
         if (oldDownload != DownloadText) Notify(nameof(DownloadText));
         if (oldUpload != UploadText) Notify(nameof(UploadText));
@@ -507,8 +538,31 @@ public sealed class AppRow(AppUsage initialUsage, AppRow? parent = null) : INoti
     }
     internal void RefreshLanguage()
     {
+        RefreshChips();
         Notify(nameof(Name)); Notify(nameof(DownloadText)); Notify(nameof(UploadText));
         Notify(nameof(TotalText)); Notify(nameof(LimitText)); Notify(nameof(ParentRuleText));
+    }
+    public IReadOnlyList<RuleChip> RuleChips { get; private set; } = [];
+    private string _chipSignature = "";
+    private void RefreshChips()
+    {
+        var chips = new List<RuleChip>();
+        string arrows = (BlockDownload ? "↓" : "") + (BlockUpload ? "↑" : "");
+        if (arrows.Length > 0) chips.Add(new(arrows + " " + Localization.T("blocked"), "Block"));
+        var limits = new List<string>();
+        if (DownloadLimit > 0) limits.Add("↓ " + DownloadLimit);
+        if (UploadLimit > 0) limits.Add("↑ " + UploadLimit);
+        if (limits.Count > 0)
+        {
+            string suffix = DownloadLimitEnabled && UploadLimitEnabled ? "" : " " + Localization.T("disabled");
+            chips.Add(new(Localization.T("0-kb-s-1", string.Join(" · ", limits), suffix), "Limit"));
+        }
+        if (!IsProcess && Priority != 1) chips.Add(new(Localization.T(Priority == 0 ? "priority-low" : "priority-high"), "Priority"));
+        string signature = string.Join("|", chips.Select(chip => chip.Text));
+        if (signature == _chipSignature) return;
+        _chipSignature = signature;
+        RuleChips = chips;
+        Notify(nameof(RuleChips));
     }
     private void Notify(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     public string Path => usage.Path;

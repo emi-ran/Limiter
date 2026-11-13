@@ -9,8 +9,17 @@
   "priority-capacity": { "tr": "Öncelik kapasitesi · KB/sn", "en": "Priority capacity · KB/s" },
   "priority-capacity-download": { "tr": "İndirme kapasitesi · KB/sn", "en": "Download capacity · KB/s" },
   "priority-capacity-upload": { "tr": "Yükleme kapasitesi · KB/sn", "en": "Upload capacity · KB/s" },
-  "priority-capacity-hint": { "tr": "Her yön için bağlantı kapasitesini girin ve Uygula'ya basın. 0 olduğunda o yönde önceliklendirme etkisizdir.", "en": "Enter the connection capacity for each direction and select Apply. A value of 0 disables prioritization for that direction." },
+  "priority-capacity-hint": { "tr": "İnternet bağlantınızın indirme ve yükleme hızını KB/sn olarak girin, ardından Uygula'ya basın. Bir alanı 0 bırakırsanız o yönde öncelik uygulanmaz.", "en": "Enter your internet connection's download and upload speeds in KB/s, then select Apply. Leave a field at 0 to disable priority for that direction." },
   "priority-capacity-invalid": { "tr": "Kapasiteler için 0 veya daha büyük tam sayılar girin.", "en": "Enter whole numbers of 0 or greater for capacities." },
+  "priority-explainer-title": { "tr": "Öncelik nasıl çalışır?", "en": "How does priority work?" },
+  "priority-explainer-body": { "tr": "Uygulamalar aynı anda bağlantıyı kullandığında yüksek öncelikli uygulamalara daha fazla pay ayrılır; düşük öncelikliler de bağlantıyı kullanmaya devam eder. İndirme trafiğinde bu öncelik her zaman beklenen sonucu vermeyebilir.", "en": "When apps use the connection at the same time, higher-priority apps get a larger share, while lower-priority apps can still use the connection. Download priority may not always have the expected effect." },
+  "engine-state-on": { "tr": "Açık", "en": "On" },
+  "engine-state-off": { "tr": "Kapalı", "en": "Off" },
+  "header-average": { "tr": "3 sn ortalama", "en": "3 s average" },
+  "header-session": { "tr": "Oturum toplamı", "en": "Session total" },
+  "header-by-limit": { "tr": "Sınıra göre", "en": "By limit" },
+  "no-applications-match": { "tr": "Eşleşen uygulama yok", "en": "No applications match" },
+  "settings-subtitle": { "tr": "Dil, Windows başlangıcı ve öncelik kapasitesi", "en": "Language, Windows startup and priority capacity" },
   "tray-open": { "tr": "Aç", "en": "Open" },
   "tray-exit": { "tr": "Çıkış", "en": "Exit" },
   "tray-monitoring-error": { "tr": "Limiter · Paket izleme durdu", "en": "Limiter · Packet monitoring stopped" },
@@ -67,12 +76,12 @@
     "en": "Could not change startup setting: "
   },
   "english-is-used-when-the-system-language-is-not-turkish-or-english": {
-    "tr": "Sistem dili Türkçe veya İngilizce değilse English kullanılır.",
-    "en": "English is used when the system language is not Turkish or English."
+    "tr": "Bilgisayarınızın dili Türkçe veya İngilizce değilse uygulama İngilizce açılır.",
+    "en": "If your computer's language is neither Turkish nor English, the app opens in English."
   },
   "starts-elevated-when-you-sign-in-re-enable-this-option-if-you-move-the": {
-    "tr": "Oturum açıldığında tray'de yönetici yetkisiyle başlatır. Yalnızca Program Files altına kurulan sürümlerde kullanılabilir.",
-    "en": "Starts in the system tray with administrator privileges when you sign in. Available only for installations under Program Files."
+    "tr": "Windows'a giriş yaptığınızda Limiter arka planda, bildirim alanında açılır. Bu özellik için kurulum paketini kullanmanız gerekir.",
+    "en": "Limiter starts in the notification area when you sign in to Windows. This feature requires the installer."
   },
   "language-changes-take-effect-immediately": {
     "tr": "Dil değişikliği hemen uygulanır.",
@@ -119,8 +128,8 @@
     "en": "Block upload traffic for this scope"
   },
   "blocking": {
-    "tr": "ENGELLEME",
-    "en": "BLOCKING"
+    "tr": "Engelleme",
+    "en": "Blocking"
   },
   "speed-limit": {
     "tr": "Hız sınırı",
@@ -251,8 +260,8 @@
     "en": "Soon"
   },
   "3-s-s": {
-    "tr": "3 sn · /sn",
-    "en": "3 s · /s"
+    "tr": "3 sn ortalama",
+    "en": "3 s average"
   },
   "session-traffic": {
     "tr": "Oturum trafiği",
